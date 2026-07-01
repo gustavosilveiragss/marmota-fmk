@@ -6,6 +6,11 @@ namespace mrm {
 
 class Battery {
 public:
+    struct Point {
+        float volts;
+        uint8_t percent;
+    };
+
     struct Config {
         uint8_t adcPin = 3;   // ADC1 channel, safe alongside WiFi
         float divider = 2.0f; // 100k/100k halves the cell voltage
@@ -13,6 +18,8 @@ public:
         uint32_t intervalMs = 30000;
         uint8_t lowPct = 15;
         float calibration = 1.0f;
+        const Point* curve = nullptr; // optional, highest voltage first; null uses the built-in LiPo curve
+        uint8_t curveLen = 0;
     };
 
     Battery() = default;
@@ -24,11 +31,11 @@ public:
 
     float voltage() const { return voltage_; }
     uint8_t percent() const { return percent_; }
-    bool low() const { return percent_ <= config_.lowPct; }
+    bool low() const { return percent_ < config_.lowPct; }
 
 private:
     float readVoltage() const;
-    static uint8_t percentFromVoltage(float v);
+    uint8_t percentFromVoltage(float v) const;
 
     Config config_{};
     float voltage_ = 0.0f;
