@@ -32,7 +32,12 @@ private:
 namespace power {
 
 void radioOff();
-void lightSleep(uint32_t ms);
+void cpuClock(uint32_t mhz);
+
+// Light sleep for at most maxMs, waking early on wakePin (level triggered) when it
+// is set. Keeps RAM and the display contents, so it is the idle saver of choice.
+void lightSleep(uint32_t maxMs, int wakePin = -1, bool activeLow = true);
+
 void deepSleepOnButton(uint8_t wakePin, bool activeLow = true);
 
 } // namespace power

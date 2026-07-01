@@ -2,6 +2,7 @@
 
 #include <WiFi.h>
 #include <esp_sleep.h>
+#include <driver/gpio.h>
 
 namespace mrm {
 
@@ -42,8 +43,16 @@ void radioOff() {
     WiFi.mode(WIFI_OFF);
 }
 
-void lightSleep(uint32_t ms) {
-    esp_sleep_enable_timer_wakeup(uint64_t(ms) * 1000ULL);
+void cpuClock(uint32_t mhz) {
+    setCpuFrequencyMhz(mhz);
+}
+
+void lightSleep(uint32_t maxMs, int wakePin, bool activeLow) {
+    esp_sleep_enable_timer_wakeup(uint64_t(maxMs) * 1000ULL);
+    if (wakePin >= 0) {
+        gpio_wakeup_enable(gpio_num_t(wakePin), activeLow ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+        esp_sleep_enable_gpio_wakeup();
+    }
     esp_light_sleep_start();
 }
 
