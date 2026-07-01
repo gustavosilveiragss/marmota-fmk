@@ -28,6 +28,16 @@ public:
         pinMode(pin_, config_.activeLow ? INPUT_PULLUP : INPUT);
     }
 
+    // Drop any half-finished or pending gesture. Call when starting a fresh context
+    // so a click from the previous one cannot leak into the next.
+    void reset() {
+        raw_ = false;
+        stable_ = false;
+        pendingSingle_ = false;
+        longFired_ = false;
+        edgeAt_ = pressAt_ = releaseAt_ = 0;
+    }
+
     Gesture poll() {
         const uint32_t now = millis();
         const bool down = held();
@@ -51,7 +61,7 @@ public:
             return Gesture::Long;
         }
 
-        if (pendingSingle_ && now - releaseAt_ >= config_.doubleGapMs) {
+        if (pendingSingle_ && !raw_ && now - releaseAt_ >= config_.doubleGapMs) {
             pendingSingle_ = false;
             return Gesture::Single;
         }
