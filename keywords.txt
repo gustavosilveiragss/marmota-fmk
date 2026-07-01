@@ -1,0 +1,36 @@
+Battery	KEYWORD1
+Button	KEYWORD1
+Gesture	KEYWORD1
+Ssd1306Display	KEYWORD1
+WifiPortal	KEYWORD1
+Config	KEYWORD1
+Led	KEYWORD1
+
+begin	KEYWORD2
+update	KEYWORD2
+voltage	KEYWORD2
+percent	KEYWORD2
+low	KEYWORD2
+poll	KEYWORD2
+reinit	KEYWORD2
+clear	KEYWORD2
+show	KEYWORD2
+line	KEYWORD2
+rightText	KEYWORD2
+centered	KEYWORD2
+batteryBadge	KEYWORD2
+handle	KEYWORD2
+done	KEYWORD2
+onValidate	KEYWORD2
+onRoutes	KEYWORD2
+heartbeat	KEYWORD2
+radioOff	KEYWORD2
+lightSleep	KEYWORD2
+deepSleepOnButton	KEYWORD2
+fsMount	KEYWORD2
+logBegin	KEYWORD2
+
+None	LITERAL1
+Single	LITERAL1
+Double	LITERAL1
+Long	LITERAL1
