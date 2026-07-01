@@ -80,7 +80,7 @@ void WifiPortal::sendPage() {
 }
 
 void WifiPortal::sendRedirect() {
-    server_.sendHeader("Location", "http://192.168.4.1/", true);
+    server_.sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/", true);
     server_.send(302, "text/plain", "");
 }
 

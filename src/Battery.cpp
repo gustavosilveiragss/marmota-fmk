@@ -15,11 +15,13 @@ constexpr Battery::Point kCurve[] = {
     {3.00f, 0},
 };
 constexpr size_t kCurveLen = sizeof(kCurve) / sizeof(kCurve[0]);
+constexpr uint8_t kAdcBits = 12;
+constexpr float kMvPerV = 1000.0f;
 
 } // namespace
 
 void Battery::begin() {
-    analogReadResolution(12);
+    analogReadResolution(kAdcBits);
     pinMode(config_.adcPin, INPUT);
     voltage_ = readVoltage();
     percent_ = percentFromVoltage(voltage_);
@@ -42,7 +44,7 @@ float Battery::readVoltage() const {
     for (uint8_t i = 0; i < config_.samples; ++i)
         sum += analogReadMilliVolts(config_.adcPin);
     const float millivolts = float(sum) / config_.samples;
-    return (millivolts / 1000.0f) * config_.divider * config_.calibration;
+    return (millivolts / kMvPerV) * config_.divider * config_.calibration;
 }
 
 uint8_t Battery::percentFromVoltage(float v) const {

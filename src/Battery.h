@@ -18,7 +18,7 @@ public:
         uint32_t intervalMs = 30000;
         uint8_t lowPct = 15;
         float calibration = 1.0f;
-        const Point* curve = nullptr; // optional, highest voltage first; null uses the built-in LiPo curve
+        const Point* curve = nullptr; // optional, highest voltage first, null uses the built-in LiPo curve
         uint8_t curveLen = 0;
     };
 
