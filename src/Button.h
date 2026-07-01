@@ -14,7 +14,7 @@ public:
     struct Config {
         uint16_t debounceMs = 30;
         uint16_t doubleGapMs = 360;
-        uint16_t longPressMs = 700;
+        uint16_t longPressMs = 700; // 0 disables long press
         bool activeLow = true;
     };
 
@@ -45,7 +45,7 @@ public:
                 return g;
         }
 
-        if (stable_ && !longFired_ && now - pressAt_ >= config_.longPressMs) {
+        if (config_.longPressMs && stable_ && !longFired_ && now - pressAt_ >= config_.longPressMs) {
             longFired_ = true;
             pendingSingle_ = false;
             return Gesture::Long;
