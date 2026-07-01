@@ -28,6 +28,10 @@ public:
         pinMode(pin_, config_.activeLow ? INPUT_PULLUP : INPUT);
     }
 
+    // Debounced held state. Lets a caller keep an in-progress hold instead of
+    // resetting it (e.g. a long press that spans a screen change).
+    bool pressed() const { return stable_; }
+
     // Drop any half-finished or pending gesture. Call when starting a fresh context
     // so a click from the previous one cannot leak into the next.
     void reset() {
