@@ -15,8 +15,7 @@ void Ssd1306Display::begin() {
 }
 
 void Ssd1306Display::reinit() {
-    oled_.init();
-    applyDefaults();
+    begin();
 }
 
 void Ssd1306Display::applyDefaults() {
