@@ -38,7 +38,7 @@ void runPortal() {
             .showWifi = true,
         };
         screen.draw(status, step++);
-        if (button.poll() == Gesture::Single)
+        if (button.clicks() > 0)
             break;
         delay(10);
     }
@@ -61,7 +61,7 @@ void setup() {
 void loop() {
     battery.update();
     led.heartbeat();
-    if (button.poll() == Gesture::Double)
+    if (button.clicks() == 2)
         runPortal();
     delay(10);
 }
