@@ -4,17 +4,14 @@
 
 namespace mrm {
 
-enum class Gesture : uint8_t { None,
-                               Single,
-                               Double,
-                               Long };
-
+// Single button reduced to one primitive: how many clicks happened in a burst.
+// Callers map counts to actions (1 = next, 2 = menu, N = shortcut), so there is
+// one debounce/counting path instead of separate single/double/long handling.
 class Button {
 public:
     struct Config {
         uint16_t debounceMs = 30;
-        uint16_t doubleGapMs = 360;
-        uint16_t longPressMs = 700; // 0 disables long press
+        uint16_t gapMs = 360; // quiet time that closes a click burst
         bool activeLow = true;
     };
 
@@ -28,21 +25,17 @@ public:
         pinMode(pin_, config_.activeLow ? INPUT_PULLUP : INPUT);
     }
 
-    // Debounced held state. Lets a caller keep an in-progress hold instead of
-    // resetting it (e.g. a long press that spans a screen change).
-    bool pressed() const { return stable_; }
-
-    // Drop any half-finished or pending gesture. Call when starting a fresh context
-    // so a click from the previous one cannot leak into the next.
+    // Drop a burst in progress so clicks from one context do not leak into the next.
     void reset() {
         raw_ = false;
         stable_ = false;
-        pendingSingle_ = false;
-        longFired_ = false;
-        edgeAt_ = pressAt_ = releaseAt_ = 0;
+        count_ = 0;
+        edgeAt_ = lastChange_ = 0;
     }
 
-    Gesture poll() {
+    // Number of clicks in the burst that just ended, reported once the button has
+    // been released for gapMs. Returns 0 the rest of the time.
+    uint8_t clicks() {
         const uint32_t now = millis();
         const bool down = held();
 
@@ -50,27 +43,18 @@ public:
             raw_ = down;
             edgeAt_ = now;
         }
-
         if (now - edgeAt_ >= config_.debounceMs && down != stable_) {
             stable_ = down;
-            if (stable_)
-                onPress(now);
-            else if (Gesture g = onRelease(now); g != Gesture::None)
-                return g;
+            lastChange_ = now;
+            if (stable_ && count_ < 250)
+                ++count_;
         }
-
-        if (config_.longPressMs && stable_ && !longFired_ && now - pressAt_ >= config_.longPressMs) {
-            longFired_ = true;
-            pendingSingle_ = false;
-            return Gesture::Long;
+        if (count_ > 0 && !stable_ && now - lastChange_ >= config_.gapMs) {
+            const uint8_t n = count_;
+            count_ = 0;
+            return n;
         }
-
-        if (pendingSingle_ && !raw_ && now - releaseAt_ >= config_.doubleGapMs) {
-            pendingSingle_ = false;
-            return Gesture::Single;
-        }
-
-        return Gesture::None;
+        return 0;
     }
 
 private:
@@ -79,32 +63,13 @@ private:
         return config_.activeLow ? level == LOW : level == HIGH;
     }
 
-    void onPress(uint32_t now) {
-        pressAt_ = now;
-        longFired_ = false;
-    }
-
-    Gesture onRelease(uint32_t now) {
-        releaseAt_ = now;
-        if (longFired_)
-            return Gesture::None;
-        if (pendingSingle_) {
-            pendingSingle_ = false;
-            return Gesture::Double;
-        }
-        pendingSingle_ = true;
-        return Gesture::None;
-    }
-
     uint8_t pin_;
     Config config_{};
     bool raw_ = false;
     bool stable_ = false;
-    bool pendingSingle_ = false;
-    bool longFired_ = false;
+    uint8_t count_ = 0;
     uint32_t edgeAt_ = 0;
-    uint32_t pressAt_ = 0;
-    uint32_t releaseAt_ = 0;
+    uint32_t lastChange_ = 0;
 };
 
 } // namespace mrm
