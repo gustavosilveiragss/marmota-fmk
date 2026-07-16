@@ -5,6 +5,7 @@ Ssd1306Display	KEYWORD1
 WifiPortal	KEYWORD1
 Config	KEYWORD1
 Led	KEYWORD1
+Icon	KEYWORD1
 
 begin	KEYWORD2
 update	KEYWORD2
@@ -29,6 +30,16 @@ lightSleep	KEYWORD2
 deepSleepOnButton	KEYWORD2
 fsMount	KEYWORD2
 logBegin	KEYWORD2
+drawIcon	KEYWORD2
+drawIconReveal	KEYWORD2
+drawIconDither	KEYWORD2
+arcUp	KEYWORD2
+wifiArcs	KEYWORD2
+ping	KEYWORD2
+thickLine	KEYWORD2
+ditherRect	KEYWORD2
+flapCover	KEYWORD2
+invertFlash	KEYWORD2
 
 None	LITERAL1
 Single	LITERAL1
