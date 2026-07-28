@@ -12,6 +12,7 @@ public:
         uint8_t sda = 5;
         uint8_t scl = 6;
         bool flip = true;
+        uint8_t contrast = 0; // 0 keeps the library default; lower is a straight battery saving
     };
 
     Ssd1306Display();
@@ -19,6 +20,11 @@ public:
 
     void begin();
     void reinit();
+
+    // off() keeps buffer and controller alive (~5uA), so on() brings the same frame back.
+    void on();
+    void off();
+    void setContrast(uint8_t contrast);
 
     void clear();
     void show();

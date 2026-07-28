@@ -21,9 +21,26 @@ void Ssd1306Display::reinit() {
 void Ssd1306Display::applyDefaults() {
     if (config_.flip)
         oled_.flipScreenVertically();
+    if (config_.contrast)
+        oled_.setContrast(config_.contrast);
     oled_.setFont(ArialMT_Plain_10);
     oled_.setColor(WHITE);
     oled_.setTextAlignment(TEXT_ALIGN_LEFT);
+}
+
+void Ssd1306Display::on() {
+    oled_.displayOn();
+    if (config_.contrast)
+        oled_.setContrast(config_.contrast); // displayOn re-issues the library default
+}
+
+void Ssd1306Display::off() {
+    oled_.displayOff();
+}
+
+void Ssd1306Display::setContrast(uint8_t contrast) {
+    config_.contrast = contrast;
+    oled_.setContrast(contrast);
 }
 
 void Ssd1306Display::clear() {
