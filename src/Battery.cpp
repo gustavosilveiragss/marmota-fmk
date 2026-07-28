@@ -4,15 +4,14 @@ namespace mrm {
 
 namespace {
 
+// Tensao de repouso (OCV) de LiPo LiCoO2 a 25C. Curvas de datasheet sao levantadas a 0.2C e
+// ficam ~80mV abaixo da OCV; usa-las num aparelho que puxa 0.005-0.02C superestima a carga em
+// 15-25pp no meio da descarga. O 0% fica em 3.30V: abaixo disso o LDO da placa nao segura o
+// 3V3 e sobra ~1% de carga real.
 constexpr Battery::Point kCurve[] = {
-    {4.20f, 100},
-    {4.00f, 80},
-    {3.85f, 60},
-    {3.70f, 45},
-    {3.55f, 25},
-    {3.40f, 10},
-    {3.30f, 5},
-    {3.00f, 0},
+    {4.20f, 100}, {4.15f, 95}, {4.11f, 90}, {4.08f, 85}, {4.02f, 80}, {3.98f, 75}, {3.95f, 70},
+    {3.91f, 65},  {3.87f, 60}, {3.85f, 55}, {3.84f, 50}, {3.82f, 45}, {3.80f, 40}, {3.79f, 35},
+    {3.77f, 30},  {3.75f, 25}, {3.73f, 20}, {3.71f, 15}, {3.69f, 10}, {3.61f, 5},  {3.30f, 0},
 };
 constexpr size_t kCurveLen = sizeof(kCurve) / sizeof(kCurve[0]);
 constexpr uint8_t kAdcBits = 12;
