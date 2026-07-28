@@ -80,6 +80,16 @@ uint16_t Battery::readNodeMillivolts() const {
     return uint16_t((sum + kept / 2) / kept);
 }
 
+float Battery::calibrateTo(float cellVolts) {
+    const float raw = (float(readNodeMillivolts()) / kMvPerV) * config_.divider;
+    if (raw > 0.1f)
+        config_.calibration = cellVolts / raw;
+    voltage_ = cellVolts;
+    anchor_ = cellVolts;
+    percent_ = percentFromVoltage(cellVolts);
+    return config_.calibration;
+}
+
 float Battery::readVoltage() {
     nodeMv_ = readNodeMillivolts();
     return (float(nodeMv_) / kMvPerV) * config_.divider * config_.calibration;

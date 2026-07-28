@@ -44,6 +44,12 @@ public:
     uint16_t nodeMillivolts() const { return nodeMv_; }
     uint16_t readNodeMillivolts() const;
 
+    // Per-unit trim: divider e ganho de ADC variam por placa. calibrateTo() com a celula em
+    // repouso mede o valor; quem chama persiste o retorno.
+    float calibration() const { return config_.calibration; }
+    void setCalibration(float cal) { config_.calibration = cal; }
+    float calibrateTo(float cellVolts);
+
 private:
     float readVoltage();
     uint8_t percentFromVoltage(float v) const;
