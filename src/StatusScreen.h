@@ -4,9 +4,9 @@
 
 namespace mrm {
 
-// A top bar (optional wifi glyph, title and battery) over centered body lines.
-// The number of visible lines follows the panel height, so the same screen also
-// fits smaller displays by paging through the lines across successive draws.
+// Uma barra de topo (glifo wifi opcional, titulo e bateria) sobre linhas centralizadas. O numero
+// de linhas visiveis segue a altura do painel, entao a mesma tela cabe em displays menores
+// paginando as linhas ao longo de draws sucessivos.
 class StatusScreen {
 public:
     struct Config {
@@ -21,7 +21,7 @@ public:
     explicit StatusScreen(Ssd1306Display& display)
         : display_(display) {}
 
-    // step advances the wifi animation and the line paging on small panels.
+    // step avanca a animacao do wifi e a paginacao de linhas em paineis pequenos.
     void draw(const Config& config, uint8_t step = 0);
 
 private:

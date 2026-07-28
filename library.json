@@ -1,7 +1,7 @@
 {
   "name": "marmota-fmk",
-  "version": "0.5.0",
-  "description": "Shared ESP32 firmware framework for the marmota device line: battery, on-demand WiFi portal, button gestures, OLED, power and storage.",
+  "version": "0.8.0",
+  "description": "Shared ESP32 firmware framework for the marmota device line: battery, on-demand WiFi portal, button clicks, OLED, power and storage.",
   "keywords": "esp32, oled, ssd1306, battery, lipo, wifi, captive-portal, button",
   "repository": {
     "type": "git",

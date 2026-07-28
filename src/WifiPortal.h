@@ -12,8 +12,8 @@ class WifiPortal {
 public:
     struct Config {
         const char* ssid = "marmota";
-        const char* destPath = "/upload.bin"; // where a valid upload is stored
-        const char* page = nullptr;           // HTML served at GET /
+        const char* destPath = "/upload.bin"; // onde um upload valido e guardado
+        const char* page = nullptr;           // HTML servido em GET /
     };
 
     using Validator = std::function<bool(const char* tmpPath)>;

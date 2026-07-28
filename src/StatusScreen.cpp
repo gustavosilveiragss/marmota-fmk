@@ -7,15 +7,15 @@ namespace {
 constexpr int16_t kPad = 2;
 constexpr int16_t kBarHeight = 12;
 constexpr int16_t kBarTextY = 1;
-constexpr int16_t kPitch = 12;    // body line spacing
-constexpr uint8_t kPageSteps = 3; // draws per page when lines overflow the panel
+constexpr int16_t kPitch = 12;    // espacamento das linhas do corpo
+constexpr uint8_t kPageSteps = 3; // draws por pagina quando as linhas estouram o painel
 
 constexpr int16_t kWifiW = 8;
 constexpr int16_t kWifiH = 8;
 constexpr int16_t kWifiY = 2;
 constexpr uint8_t kWifiFrames = 4;
 
-// 8x8 wifi glyph, arcs growing out of a base dot (XBM rows, LSB = leftmost pixel).
+// glifo wifi 8x8, arcos crescendo de um ponto base (linhas XBM, LSB = pixel mais a esquerda).
 const uint8_t kWifi[kWifiFrames][kWifiH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00},
     {0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x18, 0x00},

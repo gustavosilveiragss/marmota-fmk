@@ -64,7 +64,7 @@ void arcUp(SSD1306Wire& oled, int16_t cx, int16_t cy, int16_t r) {
 }
 
 void wifiArcs(SSD1306Wire& oled, int16_t cx, int16_t by, uint8_t frame, int16_t r) {
-    oled.setPixel(cx, by); // a 5px plus base, fillCircle(r=1) would drop the bridging pixels
+    oled.setPixel(cx, by); // uma base em cruz de 5px, fillCircle(r=1) perderia os pixels de ligacao
     oled.setPixel(cx - 1, by);
     oled.setPixel(cx + 1, by);
     oled.setPixel(cx, by - 1);

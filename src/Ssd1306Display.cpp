@@ -31,7 +31,7 @@ void Ssd1306Display::applyDefaults() {
 void Ssd1306Display::on() {
     oled_.displayOn();
     if (config_.contrast)
-        oled_.setContrast(config_.contrast); // displayOn re-issues the library default
+        oled_.setContrast(config_.contrast); // displayOn reemite o padrao da lib
 }
 
 void Ssd1306Display::off() {

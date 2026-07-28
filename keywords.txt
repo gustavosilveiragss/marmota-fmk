@@ -1,6 +1,5 @@
 Battery	KEYWORD1
 Button	KEYWORD1
-Gesture	KEYWORD1
 Ssd1306Display	KEYWORD1
 WifiPortal	KEYWORD1
 Config	KEYWORD1
@@ -12,7 +11,6 @@ update	KEYWORD2
 voltage	KEYWORD2
 percent	KEYWORD2
 low	KEYWORD2
-poll	KEYWORD2
 reinit	KEYWORD2
 clear	KEYWORD2
 show	KEYWORD2
@@ -40,8 +38,3 @@ thickLine	KEYWORD2
 ditherRect	KEYWORD2
 flapCover	KEYWORD2
 invertFlash	KEYWORD2
-
-None	LITERAL1
-Single	LITERAL1
-Double	LITERAL1
-Long	LITERAL1

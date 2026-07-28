@@ -1,13 +1,13 @@
 # marmota-fmk
 
 Shared ESP32 firmware guts for the [marmota](https://github.com/gustavosilveiragss/marmota)
-line: battery, on-demand WiFi upload portal, button gestures, OLED, power saving,
+line: battery, on-demand WiFi upload portal, button clicks, OLED, power saving,
 storage. Namespace `mrm`, PlatformIO, C++20.
 
 ## Use
 
 ```ini
-lib_deps = https://github.com/gustavosilveiragss/marmota-fmk.git#v0.2.0
+lib_deps = https://github.com/gustavosilveiragss/marmota-fmk.git#v0.8.0
 ```
 
 ```cpp

@@ -4,9 +4,9 @@
 
 namespace mrm {
 
-// Cell gauge behind a resistor divider. Each read is a trimmed mean (noisy ADC, high-impedance
-// divider, radio bursts on the rail), smoothed across updates, and the percent only climbs when
-// the cell really climbs, so the badge does not bounce.
+// Medidor de celula atras de um divisor resistivo. Cada leitura e uma media aparada (ADC ruidoso,
+// divisor de alta impedancia, rajadas do radio no rail), suavizada entre updates, e a porcentagem
+// so sobe quando a celula sobe de verdade, pra o badge nao balancar.
 class Battery {
 public:
     struct Point {
@@ -15,16 +15,16 @@ public:
     };
 
     struct Config {
-        uint8_t adcPin = 3;   // ADC1 channel, safe alongside WiFi
-        float divider = 2.0f; // 100k/100k halves the cell voltage
-        uint8_t samples = 24; // per read; only the middle half is averaged (max 32)
+        uint8_t adcPin = 3;   // canal do ADC1, seguro com o WiFi ligado
+        float divider = 2.0f; // 100k/100k divide a tensao da celula por 2
+        uint8_t samples = 24; // por leitura, so a metade do meio e mediada (max 32)
         uint32_t intervalMs = 5000;
         uint8_t lowPct = 15;
         float calibration = 1.0f;
-        float smoothing = 0.25f;       // weight of a fresh read in the running voltage
-        float riseHysteresisV = 0.04f; // climb needed before the percent is allowed back up
-        float usbThresholdV = 4.35f;   // above any real cell: the node is on the usb rail
-        const Point* curve = nullptr;  // optional, highest voltage first, null uses the built-in LiPo curve
+        float smoothing = 0.25f;       // peso de uma leitura nova na tensao corrente
+        float riseHysteresisV = 0.04f; // subida necessaria antes da porcentagem poder voltar a subir
+        float usbThresholdV = 4.35f;   // acima de qualquer celula real, o no esta no rail do usb
+        const Point* curve = nullptr;  // opcional, maior tensao primeiro, null usa a curva LiPo interna
         uint8_t curveLen = 0;
     };
 
@@ -39,13 +39,13 @@ public:
     uint8_t percent() const { return percent_; }
     bool low() const { return !usb_ && percent_ < config_.lowPct; }
 
-    bool usb() const { return usb_; } // reading is the usb rail, not a cell
+    bool usb() const { return usb_; } // a leitura e o rail do usb, nao uma celula
 
     uint16_t nodeMillivolts() const { return nodeMv_; }
     uint16_t readNodeMillivolts() const;
 
-    // Per-unit trim: divider e ganho de ADC variam por placa. calibrateTo() com a celula em
-    // repouso mede o valor; quem chama persiste o retorno.
+    // Trim por unidade: divisor e ganho de ADC variam por placa. calibrateTo() com a celula em
+    // repouso mede o valor, quem chama persiste o retorno.
     float calibration() const { return config_.calibration; }
     void setCalibration(float cal) { config_.calibration = cal; }
     float calibrateTo(float cellVolts);
@@ -56,7 +56,7 @@ private:
 
     Config config_{};
     float voltage_ = 0.0f;
-    float anchor_ = 0.0f; // voltage that set the current percent, the rise hysteresis reference
+    float anchor_ = 0.0f; // tensao que fixou a porcentagem vigente, referencia da histerese de subida
     uint16_t nodeMv_ = 0;
     uint8_t percent_ = 0;
     uint32_t lastRead_ = 0;

@@ -5,7 +5,7 @@ namespace mrm {
 namespace {
 
 // Tensao de repouso (OCV) de LiPo LiCoO2 a 25C. Curvas de datasheet sao levantadas a 0.2C e
-// ficam ~80mV abaixo da OCV; usa-las num aparelho que puxa 0.005-0.02C superestima a carga em
+// ficam ~80mV abaixo da OCV. Usa-las num aparelho que puxa 0.005-0.02C superestima a carga em
 // 15-25pp no meio da descarga. O 0% fica em 3.30V: abaixo disso o LDO da placa nao segura o
 // 3V3 e sobra ~1% de carga real.
 constexpr Battery::Point kCurve[] = {
@@ -24,7 +24,7 @@ constexpr uint8_t kMinSamples = 4;
 void Battery::begin() {
     analogReadResolution(kAdcBits);
     pinMode(config_.adcPin, INPUT);
-    analogSetPinAttenuation(config_.adcPin, ADC_11db); // node sits at ~2.1V full, ~2.5V on usb
+    analogSetPinAttenuation(config_.adcPin, ADC_11db); // no fica em ~2.1V cheio, ~2.5V no usb
     voltage_ = readVoltage();
     anchor_ = voltage_;
     usb_ = voltage_ > config_.usbThresholdV;
@@ -43,8 +43,8 @@ bool Battery::update() {
     voltage_ = primed_ ? voltage_ + alpha * (fresh - voltage_) : fresh;
     usb_ = voltage_ > config_.usbThresholdV;
 
-    // Falling always wins; rising needs real gain (charger, rail recovering after playback),
-    // otherwise noise ratchets the badge between two curve points.
+    // Queda sempre vence. Subida precisa de ganho real (carregador, rail se recuperando depois de
+    // tocar), senao o ruido faz o badge saltar entre dois pontos da curva.
     const uint8_t reading = percentFromVoltage(voltage_);
     if (!primed_ || reading < percent_ || usb_ || voltage_ > anchor_ + config_.riseHysteresisV) {
         percent_ = reading;
@@ -54,12 +54,12 @@ bool Battery::update() {
     return true;
 }
 
-// Trimmed mean of the middle half: TX bursts and the high divider impedance show up as one-sided
-// spikes, which a plain mean folds in and a median answers with one sample's quantization.
+// Media aparada da metade do meio: rajadas de TX e a alta impedancia do divisor viram picos de um
+// lado so, que a media simples engole e a mediana responde com a quantizacao de uma amostra.
 uint16_t Battery::readNodeMillivolts() const {
     const uint8_t n = constrain(config_.samples, kMinSamples, kMaxSamples);
     uint16_t s[kMaxSamples];
-    analogReadMilliVolts(config_.adcPin); // discard the settling conversion
+    analogReadMilliVolts(config_.adcPin); // descarta a conversao de assentamento
     for (uint8_t i = 0; i < n; ++i)
         s[i] = uint16_t(analogReadMilliVolts(config_.adcPin));
 

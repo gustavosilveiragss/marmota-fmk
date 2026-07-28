@@ -12,7 +12,7 @@ public:
         uint8_t sda = 5;
         uint8_t scl = 6;
         bool flip = true;
-        uint8_t contrast = 0; // 0 keeps the library default; lower is a straight battery saving
+        uint8_t contrast = 0; // 0 mantem o padrao da lib, mais baixo economiza bateria direto
     };
 
     Ssd1306Display();
@@ -21,7 +21,7 @@ public:
     void begin();
     void reinit();
 
-    // off() keeps buffer and controller alive (~5uA), so on() brings the same frame back.
+    // off() mantem o buffer e o controlador vivos (~5uA), entao on() traz o mesmo frame de volta.
     void on();
     void off();
     void setContrast(uint8_t contrast);

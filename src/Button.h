@@ -4,14 +4,14 @@
 
 namespace mrm {
 
-// Single button reduced to one primitive: how many clicks happened in a burst.
-// Callers map counts to actions (1 = next, 2 = menu, N = shortcut), so there is
-// one debounce/counting path instead of separate single/double/long handling.
+// Botao unico reduzido a uma primitiva: quantos cliques houve numa rajada. Quem chama mapeia a
+// contagem pra acoes (1 = next, 2 = menu, N = atalho), entao ha um caminho unico de debounce e
+// contagem, em vez de tratar cada tipo de clique separado.
 class Button {
 public:
     struct Config {
         uint16_t debounceMs = 30;
-        uint16_t gapMs = 360; // quiet time that closes a click burst
+        uint16_t gapMs = 360; // tempo de silencio que fecha uma rajada de cliques
         bool activeLow = true;
     };
 
@@ -25,7 +25,7 @@ public:
         pinMode(pin_, config_.activeLow ? INPUT_PULLUP : INPUT);
     }
 
-    // Drop a burst in progress so clicks from one context do not leak into the next.
+    // Descarta uma rajada em andamento pra cliques de um contexto nao vazarem pro proximo.
     void reset() {
         raw_ = false;
         stable_ = false;
@@ -33,8 +33,8 @@ public:
         edgeAt_ = lastChange_ = 0;
     }
 
-    // Number of clicks in the burst that just ended, reported once the button has
-    // been released for gapMs. Returns 0 the rest of the time.
+    // Numero de cliques da rajada que acabou, reportado quando o botao ficou solto por gapMs.
+    // Retorna 0 no resto do tempo.
     uint8_t clicks() {
         const uint32_t now = millis();
         const bool down = held();

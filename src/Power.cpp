@@ -55,7 +55,7 @@ void lightSleep(uint32_t maxMs, int wakePin, bool activeLow) {
     if (maxMs > 0)
         esp_sleep_enable_timer_wakeup(uint64_t(maxMs) * kUsPerMs);
     else
-        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER); // pin-only: sleep until pressed
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER); // so pino: dorme ate apertar
     if (wakePin >= 0) {
         gpio_wakeup_enable(gpio_num_t(wakePin), activeLow ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
         esp_sleep_enable_gpio_wakeup();
