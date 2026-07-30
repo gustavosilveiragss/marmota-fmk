@@ -43,10 +43,13 @@ bool Battery::update() {
     voltage_ = primed_ ? voltage_ + alpha * (fresh - voltage_) : fresh;
     usb_ = voltage_ > config_.usbThresholdV;
 
-    // Queda sempre vence. Subida precisa de ganho real (carregador, rail se recuperando depois de
-    // tocar), senao o ruido faz o badge saltar entre dois pontos da curva.
+    // A porcentagem so mexe quando a tensao sai da banda morta em volta da ancora, pros dois lados.
+    // Ruido menor que a histerese nao balanca o badge entre pontos da curva, e uma queda de ruido
+    // nao afunda a ancora, senao a porcentagem viraria o minimo corrente e nunca voltava a subir.
     const uint8_t reading = percentFromVoltage(voltage_);
-    if (!primed_ || reading < percent_ || usb_ || voltage_ > anchor_ + config_.riseHysteresisV) {
+    const bool moved = voltage_ > anchor_ + config_.riseHysteresisV ||
+                       voltage_ < anchor_ - config_.riseHysteresisV;
+    if (!primed_ || usb_ || moved) {
         percent_ = reading;
         anchor_ = voltage_;
     }

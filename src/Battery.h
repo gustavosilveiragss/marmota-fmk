@@ -6,7 +6,7 @@ namespace mrm {
 
 // Medidor de celula atras de um divisor resistivo. Cada leitura e uma media aparada (ADC ruidoso,
 // divisor de alta impedancia, rajadas do radio no rail), suavizada entre updates, e a porcentagem
-// so sobe quando a celula sobe de verdade, pra o badge nao balancar.
+// so mexe quando a celula sai de uma banda morta, pra o badge nao balancar com o ruido.
 class Battery {
 public:
     struct Point {
@@ -22,7 +22,7 @@ public:
         uint8_t lowPct = 15;
         float calibration = 1.0f;
         float smoothing = 0.25f;       // peso de uma leitura nova na tensao corrente
-        float riseHysteresisV = 0.04f; // subida necessaria antes da porcentagem poder voltar a subir
+        float riseHysteresisV = 0.04f; // banda morta: a tensao move isso da ancora pra o badge mexer
         float usbThresholdV = 4.35f;   // acima de qualquer celula real, o no esta no rail do usb
         const Point* curve = nullptr;  // opcional, maior tensao primeiro, null usa a curva LiPo interna
         uint8_t curveLen = 0;
@@ -56,7 +56,7 @@ private:
 
     Config config_{};
     float voltage_ = 0.0f;
-    float anchor_ = 0.0f; // tensao que fixou a porcentagem vigente, referencia da histerese de subida
+    float anchor_ = 0.0f; // tensao que fixou a porcentagem vigente, centro da banda morta
     uint16_t nodeMv_ = 0;
     uint8_t percent_ = 0;
     uint32_t lastRead_ = 0;
