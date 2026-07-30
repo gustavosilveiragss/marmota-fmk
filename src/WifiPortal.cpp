@@ -45,12 +45,18 @@ void WifiPortal::handleUpload() {
     HTTPUpload& up = server_.upload();
     if (up.status == UPLOAD_FILE_START) {
         uploadError_ = false;
+        done_ = false;
         upload_ = LittleFS.open(tmpPath_, "w");
         if (!upload_)
             uploadError_ = true;
     } else if (up.status == UPLOAD_FILE_WRITE) {
         if (upload_ && !uploadError_ && upload_.write(up.buf, up.currentSize) != up.currentSize)
             uploadError_ = true;
+    } else if (up.status == UPLOAD_FILE_ABORTED) {
+        if (upload_)
+            upload_.close();
+        LittleFS.remove(tmpPath_);
+        uploadError_ = true;
     } else if (up.status == UPLOAD_FILE_END) {
         if (upload_)
             upload_.close();
@@ -64,7 +70,8 @@ void WifiPortal::handleUpload() {
             uploadError_ = true;
             return;
         }
-        LittleFS.remove(config_.destPath);
+        // rename atomico por cima do destino. Um remove antes abriria uma janela onde uma falha
+        // (queda de energia, flash cheio) apaga o conteudo atual sem por o novo no lugar.
         if (LittleFS.rename(tmpPath_, config_.destPath))
             done_ = true;
         else
