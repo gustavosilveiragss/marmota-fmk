@@ -89,6 +89,8 @@ float Battery::calibrateTo(float cellVolts) {
     voltage_ = cellVolts;
     anchor_ = cellVolts;
     percent_ = percentFromVoltage(cellVolts);
+    lastRead_ = millis();
+    primed_ = true;
     return config_.calibration;
 }
 
