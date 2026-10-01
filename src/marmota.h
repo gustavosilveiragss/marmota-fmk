@@ -6,6 +6,7 @@
 #include "Ssd1306Display.h"
 #include "Gfx.h"
 #include "Icons.h"
+#include "Identity.h"
 #include "Locale.h"
 #include "StatusScreen.h"
 #include "Storage.h"
