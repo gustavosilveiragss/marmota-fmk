@@ -38,3 +38,5 @@ thickLine	KEYWORD2
 ditherRect	KEYWORD2
 flapCover	KEYWORD2
 invertFlash	KEYWORD2
+Locale	KEYWORD1
+Lang	KEYWORD1

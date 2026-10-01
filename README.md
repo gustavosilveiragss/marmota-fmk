@@ -2,7 +2,7 @@
 
 Shared ESP32 firmware guts for the [marmota](https://github.com/gustavosilveiragss/marmota)
 line: battery, on-demand WiFi upload portal, button clicks, OLED, power saving,
-storage. Namespace `mrm`, PlatformIO, C++20.
+storage, pt-BR/en text catalog (`Locale`). Namespace `mrm`, PlatformIO, C++20.
 
 ## Use
 
