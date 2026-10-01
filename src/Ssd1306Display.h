@@ -5,7 +5,21 @@
 
 namespace mrm {
 
+// SSD1306Wire com texto sem alocar: o drawString da lib so aceita String e faz copias no heap a
+// cada chamada, o que fragmenta a memoria num redesenho de 20 quadros por segundo.
+class Panel : public SSD1306Wire {
+public:
+    using SSD1306Wire::SSD1306Wire;
+
+    // Uma linha de texto UTF-8, no alinhamento atual, sem quebra de linha.
+    uint16_t drawText(int16_t x, int16_t y, const char* text) {
+        const uint16_t length = strlen(text);
+        return drawStringInternal(x, y, text, length, getStringWidth(text, length, true), true);
+    }
+};
+
 class Ssd1306Display {
+public:
 public:
     struct Config {
         uint8_t address = 0x3c;
@@ -33,13 +47,13 @@ public:
     void centered(int16_t y, const String& text);
     void batteryBadge(uint8_t percent);
 
-    SSD1306Wire& raw() { return oled_; }
+    Panel& raw() { return oled_; }
 
 private:
     void applyDefaults();
 
     Config config_;
-    SSD1306Wire oled_;
+    Panel oled_;
 };
 
 } // namespace mrm
