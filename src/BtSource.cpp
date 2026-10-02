@@ -302,6 +302,11 @@ void BtSource::onAudio(esp_a2d_audio_state_t st, void* self) {
     const bool started = st == ESP_A2D_AUDIO_STATE_STARTED;
     State e = started ? State::Connected : State::Streaming;
     b.state_.compare_exchange_strong(e, started ? State::Streaming : State::Connected);
+    // A lib fica em STARTED para sempre depois de uma suspensao e o heartbeat nunca pede START de
+    // novo; o fone volta a pedir, e a pilha suspende todo start iniciado pelo fone (liga e para).
+    // IDLE (0 no enum privado da lib) faz o proximo heartbeat pedir o START do nosso lado.
+    if (!started)
+        b.s_media_state = 0;
 }
 
 } // namespace mrm

@@ -48,6 +48,7 @@ public:
     uint32_t playedFrames() const; // da faixa atual, entregues ao callback
     bool finished() const;         // arquivo acabou e o ring esvaziou
     uint32_t underruns() const { return underruns_; }
+    uint32_t buffered() const { return written_.load() - read_.load(); } // bytes no ring, inclui faixa velha
     const Stats& stats() const { return stats_; }
     uint32_t stackFree() const; // bytes de pilha que a task nunca usou
 
