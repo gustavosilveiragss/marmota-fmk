@@ -12,3 +12,5 @@
 #include "Storage.h"
 #include "WifiPortal.h"
 #include "Power.h"
+#include "Mp3Sniff.h"
+#include "JsonOut.h"

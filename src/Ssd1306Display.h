@@ -20,7 +20,6 @@ public:
 
 class Ssd1306Display {
 public:
-public:
     struct Config {
         uint8_t address = 0x3c;
         uint8_t sda = 5;
