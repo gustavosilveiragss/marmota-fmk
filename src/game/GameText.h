@@ -26,8 +26,8 @@ enum class Str : uint16_t {
 inline constexpr Text kTexts[] = {
     {"desce", "down"},
     {"ok", "ok"},
-    {"volta", "back"},
-    {">", ">"},
+    {"voltar", "back"},
+    {"avançar", "next"},
     {"sair", "exit"},
     {"jogar", "play"},
     {"Sair", "Exit"},
