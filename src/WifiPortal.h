@@ -12,8 +12,12 @@ class WifiPortal {
 public:
     struct Config {
         const char* ssid = "marmota";
-        const char* destPath = "/upload.bin"; // onde um upload valido e guardado
+        const char* destPath = "/upload.bin"; // onde um upload valido e guardado, nullptr desliga /upload
         const char* page = nullptr;           // HTML servido em GET /
+        const uint8_t* pageGz = nullptr;      // pagina gzip em PROGMEM, tem prioridade sobre page
+        size_t pageGzLen = 0;
+        uint8_t channel = 1;
+        uint8_t maxClients = 4;
     };
 
     using Validator = std::function<bool(const char* tmpPath)>;
@@ -32,6 +36,7 @@ public:
 
 private:
     void handleUpload();
+    void sendUploadResult();
     void sendPage();
     void sendRedirect();
 
@@ -42,6 +47,7 @@ private:
     DNSServer dns_;
     File upload_;
     String tmpPath_;
+    bool badRequest_ = false;
     bool uploadError_ = false;
     bool done_ = false;
 };

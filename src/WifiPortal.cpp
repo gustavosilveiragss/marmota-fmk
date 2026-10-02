@@ -11,16 +11,24 @@ constexpr const char* kUploadRoute = "/upload";
 } // namespace
 
 void WifiPortal::begin() {
-    tmpPath_ = String(config_.destPath) + ".tmp";
+    if (config_.destPath)
+        tmpPath_ = String(config_.destPath) + ".tmp";
     uploadError_ = false;
+    badRequest_ = false;
     done_ = false;
 
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(config_.ssid);
+    WiFi.softAP(config_.ssid, nullptr, config_.channel, 0, config_.maxClients);
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 
     server_.on("/", HTTP_GET, [this] { sendPage(); });
-    server_.on(kUploadRoute, HTTP_POST, [this] { server_.send(uploadError_ ? 500 : 200, "text/plain", uploadError_ ? "fail" : "ok"); }, [this] { handleUpload(); });
+    if (config_.destPath) {
+        // handleUpload precisa do Content-Type para recusar POST que nao e multipart. O hook pode
+        // sobrescrever a lista, entao mantenha Content-Type nela.
+        static const char* kHeaders[] = {"Content-Type"};
+        server_.collectHeaders(kHeaders, 1);
+        server_.on(kUploadRoute, HTTP_POST, [this] { sendUploadResult(); }, [this] { handleUpload(); });
+    }
     if (routes_)
         routes_(server_);
     server_.onNotFound([this] { sendRedirect(); });
@@ -41,7 +49,21 @@ void WifiPortal::end() {
     WiFi.mode(WIFI_OFF);
 }
 
+void WifiPortal::sendUploadResult() {
+    if (badRequest_) {
+        badRequest_ = false;
+        server_.send(400, "text/plain", "bad request");
+        return;
+    }
+    server_.send(uploadError_ ? 500 : 200, "text/plain", uploadError_ ? "fail" : "ok");
+}
+
 void WifiPortal::handleUpload() {
+    // POST nao multipart cai no caminho raw do WebServer, onde upload() desreferencia ponteiro nulo.
+    if (!server_.header("Content-Type").startsWith("multipart/form-data")) {
+        badRequest_ = true;
+        return;
+    }
     HTTPUpload& up = server_.upload();
     if (up.status == UPLOAD_FILE_START) {
         uploadError_ = false;
@@ -80,7 +102,10 @@ void WifiPortal::handleUpload() {
 }
 
 void WifiPortal::sendPage() {
-    if (config_.page)
+    if (config_.pageGz && config_.pageGzLen) {
+        server_.sendHeader("Content-Encoding", "gzip");
+        server_.send_P(200, "text/html", reinterpret_cast<PGM_P>(config_.pageGz), config_.pageGzLen);
+    } else if (config_.page)
         server_.send(200, "text/html", config_.page);
     else
         server_.send(200, "text/plain", "marmota");
