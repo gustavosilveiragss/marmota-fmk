@@ -32,11 +32,13 @@ public:
     };
 
     // Liga o radio. A pilha sobe em outra task e comeca uma varredura sozinha (a lib nao deixa
-    // pular); o dado enviado ao fone e silencio ate set_data_callback() trocar. Auto-reconexao da lib
-    // fica desligada: quem guarda o BDA do ultimo fone e o chamador.
+    // pular); o dado enviado ao fone e silencio ate set_data_callback() trocar. O callback trocado
+    // tambem recebe (nullptr, -1) quando a pilha esvazia a fila e deve devolver 0. Auto-reconexao
+    // da lib fica desligada: quem guarda o BDA do ultimo fone e o chamador.
     void start() override;
-    // Desliga de verdade (o heap volta). BLOQUEIA: end() espera a desconexao por ate ~2,3 s
-    // (A2DP_DISCONNECT_LIMIT x 100 ms) e leva ~0,3 s de pausas fixas mesmo sem fone.
+    // Desliga de verdade (o heap volta). BLOQUEIA: com tentativa de conexao no ar espera o page
+    // terminar (ate ~5,2 s); end() espera a desconexao por ate ~2,3 s (A2DP_DISCONNECT_LIMIT x 100 ms)
+    // e leva ~0,5 s de pausas fixas mesmo sem fone.
     void stop();
 
     // Chamar do loop(): esvazia a fila do callback do GAP na lista e vigia timeouts.
@@ -80,11 +82,12 @@ private:
     void connectNow();
 
     std::atomic<State> state_{State::Off};
-    std::atomic<bool> ready_{false};      // a pilha subiu (1o evento de varredura)
-    std::atomic<bool> scanLive_{false};   // inquiry em andamento no controlador
+    std::atomic<bool> ready_{false};    // a pilha subiu (1o evento de varredura)
+    std::atomic<bool> scanLive_{false}; // inquiry em andamento no controlador
     std::atomic<bool> connectPending_{false};
     std::atomic<bool> rescan_{false};
     std::atomic<bool> dropExpected_{false}; // desconexao pedida por nos: o evento nao e queda do fone
+    std::atomic<bool> paging_{false};       // connect_to no ar ate o evento CONNECTED ou DISCONNECTED
     std::atomic<uint16_t> dropped_{0};
 
     Event queue_[kQueue];

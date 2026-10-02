@@ -13,8 +13,11 @@ namespace {
 
 constexpr uint32_t kScanGuardMs = 16000; // varredura de 12,8 s; passou disso a pilha nao respondeu
 constexpr uint32_t kConnectMs = 12000;   // page timeout do controlador mais folga; abaixo dos 15 s do Navigator
+constexpr uint32_t kPageWaitMs = 6000;   // page timeout padrao do controlador (5,12 s) mais folga
 
 int32_t silence(uint8_t* data, int32_t len) {
+    if (!data || len <= 0)
+        return 0; // a pilha chama (NULL, -1) ao esvaziar a fila quando o stream para
     memset(data, 0, len);
     return len;
 }
@@ -36,7 +39,7 @@ void BtSource::start() {
 
     foundCount_ = 0;
     head_ = tail_ = 0;
-    ready_ = scanLive_ = connectPending_ = rescan_ = dropExpected_ = false;
+    ready_ = scanLive_ = connectPending_ = rescan_ = dropExpected_ = paging_ = false;
     state_ = State::Scanning;
     stateAt_ = millis();
     BluetoothA2DPSource::start();
@@ -50,13 +53,18 @@ void BtSource::stop() {
     if (state_ == State::Off)
         return;
     disconnect();
+    // A pilha ignora o disconnect durante o page, e o deinit do A2DP no meio dele libera btc_av_cb;
+    // o fim do page chega depois na task BTC e derruba o chip (LoadProhibited em btc_a2dp_cb_handler).
+    const uint32_t t0 = millis();
+    while (paging_ && millis() - t0 < kPageWaitMs)
+        delay(10);
     end(false);
     // end(true) tambem faz mem_release, que impede religar; aqui so o que desfaz o init de start().
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
     btStop();
     state_ = State::Off;
-    ready_ = scanLive_ = connectPending_ = rescan_ = dropExpected_ = false;
+    ready_ = scanLive_ = connectPending_ = rescan_ = dropExpected_ = paging_ = false;
     foundCount_ = 0;
 }
 
@@ -130,8 +138,10 @@ void BtSource::disconnect() {
 }
 
 void BtSource::connectNow() {
+    paging_ = true;
     if (connect_to(peer_bd_addr))
         return;
+    paging_ = false;
     State e = State::Connecting;
     state_.compare_exchange_strong(e, State::Failed);
 }
@@ -265,6 +275,8 @@ void BtSource::addFound(const Event& e) {
 
 void BtSource::onConnection(esp_a2d_connection_state_t st, void* self) {
     BtSource& b = *static_cast<BtSource*>(self);
+    if (st == ESP_A2D_CONNECTION_STATE_CONNECTED || st == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
+        b.paging_ = false;
     if (st == ESP_A2D_CONNECTION_STATE_CONNECTED) {
         State e = State::Connecting;
         if (b.state_.compare_exchange_strong(e, State::Connected))
