@@ -21,6 +21,15 @@ void WifiPortal::begin() {
     WiFi.softAP(config_.ssid, nullptr, config_.channel, 0, config_.maxClients);
     WiFi.setTxPower(WIFI_POWER_8_5dBm);
 
+    if (!routed_)
+        addRoutes();
+    server_.begin();
+
+    dns_.start(kDnsPort, "*", WiFi.softAPIP());
+}
+
+void WifiPortal::addRoutes() {
+    routed_ = true;
     server_.on("/", HTTP_GET, [this] { sendPage(); });
     if (config_.destPath) {
         // handleUpload precisa do Content-Type para recusar POST que nao e multipart. O hook pode
@@ -32,9 +41,6 @@ void WifiPortal::begin() {
     if (routes_)
         routes_(server_);
     server_.onNotFound([this] { sendRedirect(); });
-    server_.begin();
-
-    dns_.start(kDnsPort, "*", WiFi.softAPIP());
 }
 
 void WifiPortal::handle() {
@@ -102,6 +108,10 @@ void WifiPortal::handleUpload() {
 }
 
 void WifiPortal::sendPage() {
+    // Host de fora (ex.: neverssl.com na sonda do portal cativo): a pagina chamaria a API com esse
+    // Host e levaria recusa, entao o cliente volta para o endereco do aparelho.
+    if (server_.hostHeader() != WiFi.softAPIP().toString())
+        return sendRedirect();
     if (config_.pageGz && config_.pageGzLen) {
         server_.sendHeader("Content-Encoding", "gzip");
         server_.send_P(200, "text/html", reinterpret_cast<PGM_P>(config_.pageGz), config_.pageGzLen);

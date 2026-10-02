@@ -39,6 +39,7 @@ private:
     void sendUploadResult();
     void sendPage();
     void sendRedirect();
+    void addRoutes();
 
     Config config_;
     Validator validate_;
@@ -50,6 +51,7 @@ private:
     bool badRequest_ = false;
     bool uploadError_ = false;
     bool done_ = false;
+    bool routed_ = false; // o WebServer guarda as rotas entre end e begin
 };
 
 } // namespace mrm

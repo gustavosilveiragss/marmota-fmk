@@ -40,13 +40,13 @@ Error UploadSink::start(fs::FS& fs, const Target& target) {
         return Error::Name;
     if (snprintf(dest_, sizeof(dest_), "%s/%s", target.dir, target.name) >= static_cast<int>(sizeof(dest_)))
         return Error::Name;
+    if (fs.exists(dest_))
+        return Error::Exists;
     if (config_.freeBytes) {
         const uint64_t avail = config_.freeBytes(config_.freeCtx);
         if (avail < static_cast<uint64_t>(target.size) + config_.reserve)
             return Error::Space;
     }
-    if (fs.exists(dest_))
-        return Error::Exists;
     if (!fs.exists(target.dir) && !fs.mkdir(target.dir))
         return Error::Io;
     file_ = fs.open(config_.tmpPath, FILE_WRITE);
@@ -83,7 +83,11 @@ Error UploadSink::finish() {
         return fail(Error::Rejected);
     if (verdict_ == Verdict::Need && !config_.acceptUndecided)
         return fail(Error::Rejected);
+    file_.flush();
+    const bool whole = file_.size() == size_; // close() nao avisa de erro de gravacao no fim
     file_.close();
+    if (!whole)
+        return fail(Error::Io);
     if (fs_->exists(dest_))
         return fail(Error::Exists);
     if (!fs_->rename(config_.tmpPath, dest_))
