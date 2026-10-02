@@ -14,3 +14,5 @@
 #include "Power.h"
 #include "Mp3Sniff.h"
 #include "JsonOut.h"
+#include "PathRules.h"
+#include "UploadSink.h"
