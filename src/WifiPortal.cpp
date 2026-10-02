@@ -8,6 +8,33 @@ namespace mrm {
 namespace {
 constexpr byte kDnsPort = 53;
 constexpr const char* kUploadRoute = "/upload";
+
+// WebServer::stop() so fecha o socket de escuta: o cliente corrente (em HC_WAIT_READ, por exemplo)
+// e o HTTPRaw ficam presos, segurando socket e heap ate o proximo begin(). Os membros sao
+// protected e a lib nao tem API para soltar, entao o ponteiro de membro em instanciacao explicita
+// os alcanca sem alterar a lib. Se o WebServer mudar esses nomes o build quebra, nao o runtime.
+template <typename Tag>
+struct Reach {
+    using Type = typename Tag::Type;
+    static inline Type member = nullptr;
+};
+template <typename Tag, typename Tag::Type M>
+struct Grab {
+    static inline const bool done = (Reach<Tag>::member = M, true);
+};
+struct ClientTag { using Type = WiFiClient WebServer::*; };
+struct RawTag { using Type = std::unique_ptr<HTTPRaw> WebServer::*; };
+struct StatusTag { using Type = HTTPClientStatus WebServer::*; };
+template struct Grab<ClientTag, &WebServer::_currentClient>;
+template struct Grab<RawTag, &WebServer::_currentRaw>;
+template struct Grab<StatusTag, &WebServer::_currentStatus>;
+
+void dropCurrentClient(WebServer& server) {
+    (server.*Reach<ClientTag>::member).stop();
+    server.*Reach<ClientTag>::member = WiFiClient();
+    (server.*Reach<RawTag>::member).reset();
+    server.*Reach<StatusTag>::member = HC_NONE;
+}
 } // namespace
 
 void WifiPortal::begin() {
@@ -50,6 +77,7 @@ void WifiPortal::handle() {
 
 void WifiPortal::end() {
     dns_.stop();
+    dropCurrentClient(server_);
     server_.stop();
     WiFi.softAPdisconnect(true);
     WiFi.mode(WIFI_OFF);
