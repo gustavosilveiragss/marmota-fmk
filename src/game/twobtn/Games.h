@@ -4,22 +4,30 @@
 // as telas) fica fora desta pasta e e generica: jogos com outra entrada ganham outra subpasta.
 
 #include "Breakout.h"
+#include "Columns.h"
 #include "Impact.h"
+#include "Orbit.h"
+#include "Rhythm.h"
 #include "Snake.h"
+#include "Stacker.h"
 #include "Text.h"
 
 namespace mrm {
 namespace game {
 namespace twobtn {
 
-constexpr uint8_t kCount = 3;
+constexpr uint8_t kCount = 7;
 
 // Os jogos de 2 botoes, na ordem do menu, prontos para o GameHost.
 struct Set {
     Snake snake;
     Impact impact;
     Breakout breakout;
-    Game* const list[kCount] = {&snake, &impact, &breakout};
+    Stacker stacker;
+    Rhythm rhythm;
+    Orbit orbit;
+    Columns columns;
+    Game* const list[kCount] = {&snake, &impact, &breakout, &stacker, &rhythm, &orbit, &columns};
 
     Set() = default;
     Set(const Set&) = delete;
@@ -27,7 +35,7 @@ struct Set {
 };
 
 inline const Text& name(uint8_t index) {
-    static constexpr Str kNames[kCount] = {Str::GameSnake, Str::GameImpact, Str::GameBreakout};
+    static constexpr Str kNames[kCount] = {Str::GameSnake, Str::GameImpact, Str::GameBreakout, Str::GameStacker, Str::GameRhythm, Str::GameOrbit, Str::GameColumns};
     return txt(kNames[index < kCount ? index : 0]);
 }
 
