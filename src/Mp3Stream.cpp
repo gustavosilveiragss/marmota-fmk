@@ -36,10 +36,10 @@ bool Mp3Stream::begin(fs::FS& fs) {
     return true;
 }
 
-bool Mp3Stream::send(Op op, const char* path, uint32_t offset) {
+bool Mp3Stream::send(Op op, const char* path, uint32_t offset, uint32_t rate) {
     if (!task_)
         return false;
-    Cmd c{op, seq_ + 1, offset, {}};
+    Cmd c{op, seq_ + 1, offset, rate, {}};
     strlcpy(c.path, path, sizeof(c.path));
     if (xQueueSend(queue_, &c, kSendWait) != pdTRUE)
         return false;
@@ -48,9 +48,9 @@ bool Mp3Stream::send(Op op, const char* path, uint32_t offset) {
 }
 
 bool Mp3Stream::start(const char* path, const Mp3Info& info) {
-    if (info.sampleRate != kRate || strlen(path) >= kMaxPath)
+    if ((info.sampleRate != kRate && info.sampleRate != Resample48to44::kInRate) || strlen(path) >= kMaxPath)
         return false;
-    return send(Op::Play, path, info.dataOffset);
+    return send(Op::Play, path, info.dataOffset, info.sampleRate);
 }
 
 void Mp3Stream::pause() {
@@ -166,6 +166,8 @@ void Mp3Stream::apply(const Cmd& c) {
         if (file_)
             file_.close();
         if (c.op == Op::Play) {
+            rate_ = c.rate;
+            resample_.reset();
             file_ = fs_->open(c.path, "r");
             fileDone_ = !file_ || !file_.seek(c.offset);
             eof_ = fileDone_; // arquivo sumiu: a faixa termina na hora e o player segue
@@ -217,7 +219,7 @@ void Mp3Stream::decode() {
         return; // normal nos primeiros frames: o reservatorio de bits ainda esta vazio
     if (err == ERR_MP3_INDATA_UNDERFLOW && fileDone_)
         return finish(); // ultimo frame cortado
-    if (err != ERR_MP3_NONE || fi.samprate != static_cast<int>(kRate) || fi.outputSamps <= 0) {
+    if (err != ERR_MP3_NONE || fi.samprate != static_cast<int>(rate_) || fi.outputSamps <= 0) {
         ++stats_.errors;
         if (inPtr_ == before) { // nao andou: pula o sync falso
             ++inPtr_;
@@ -237,7 +239,15 @@ void Mp3Stream::decode() {
             pcm_[2 * i] = pcm_[2 * i + 1] = pcm_[i];
         samples *= 2;
     }
-    push(reinterpret_cast<const uint8_t*>(pcm_), samples * sizeof(int16_t));
+    if (rate_ == kRate) {
+        push(reinterpret_cast<const uint8_t*>(pcm_), samples * sizeof(int16_t));
+        return;
+    }
+    bool pushing = true; // push() devolve false quando um comando interrompe: o resto do frame se perde
+    resample_.feed(pcm_, samples / 2, [&](const int16_t* out, size_t frames) {
+        if (pushing)
+            pushing = push(reinterpret_cast<const uint8_t*>(out), frames * 2 * sizeof(int16_t));
+    });
 }
 
 // Bloqueia no ring cheio em fatias de 20 ms para atender comandos; nunca gira em vazio.

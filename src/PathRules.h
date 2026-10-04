@@ -6,7 +6,7 @@
 
 namespace mrm {
 
-constexpr size_t kMaxPlaylistLen = 24;
+constexpr size_t kMaxPlaylistLen = 48;
 constexpr size_t kMaxTrackLen = 48; // com ".mp3"
 
 // Nomes viram caminhos no cartao e vem da rede: nada de separador, curinga, controle nem ponto

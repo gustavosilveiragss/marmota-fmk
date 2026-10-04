@@ -14,6 +14,7 @@
 #include <atomic>
 
 #include "Mp3Probe.h"
+#include "Mp3Resample.h"
 
 #ifndef MRM_MP3_RING_BYTES
 #define MRM_MP3_RING_BYTES (16 * 1024) // PCM entre o decoder e o Bluetooth: 1 KB = 5,8 ms
@@ -32,7 +33,7 @@ namespace mrm {
 // estado dele uma vez em begin().
 class Mp3Stream {
 public:
-    static constexpr uint32_t kRate = 44100;
+    static constexpr uint32_t kRate = 44100; // saida para o Bluetooth; faixas a 48 kHz sao convertidas
     static constexpr size_t kMaxPath = 128;
 
     // Diagnostico do decoder (teste de banda); so a task escreve.
@@ -45,7 +46,7 @@ public:
 
     bool begin(fs::FS& fs); // false se o helix nao conseguiu memoria
     // Troca a faixa: abre path, pula ate info.dataOffset e decodifica. false se a taxa nao for
-    // 44,1 kHz, o caminho nao couber ou a fila estiver cheia.
+    // 44,1 ou 48 kHz, o caminho nao couber ou a fila estiver cheia.
     bool start(const char* path, const Mp3Info& info);
     void pause(); // read() entrega silencio sem consumir o ring
     void resume();
@@ -71,6 +72,7 @@ private:
         Op op;
         uint32_t seq;
         uint32_t offset;
+        uint32_t rate; // taxa do arquivo
         char path[kMaxPath];
     };
     // Buffers estaticos: o device encolhe com -D quando a RAM aperta (o Bluetooth precisa de folga no heap).
@@ -82,7 +84,7 @@ private:
 
     static void entry(void* self);
     void run();
-    bool send(Op op, const char* path = "", uint32_t offset = 0);
+    bool send(Op op, const char* path = "", uint32_t offset = 0, uint32_t rate = kRate);
     bool poll();
     void apply(const Cmd& c);
     void decode();
@@ -103,6 +105,8 @@ private:
     bool paused_ = false;
     uint16_t badRun_ = 0; // erros seguidos: arquivo corrompido vira fim
     Stats stats_;
+    uint32_t rate_ = kRate; // da faixa atual; so a task
+    Resample48to44 resample_;
 
     uint32_t seq_ = 0; // so o loop
     std::atomic<uint32_t> ack_{0};
