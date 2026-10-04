@@ -15,6 +15,16 @@
 
 #include "Mp3Probe.h"
 
+#ifndef MRM_MP3_RING_BYTES
+#define MRM_MP3_RING_BYTES (16 * 1024) // PCM entre o decoder e o Bluetooth: 1 KB = 5,8 ms
+#endif
+#ifndef MRM_MP3_STACK_BYTES
+#define MRM_MP3_STACK_BYTES (6 * 1024)
+#endif
+#ifndef MRM_MP3_IN_BYTES
+#define MRM_MP3_IN_BYTES 4096 // bytes de MP3 lidos do arquivo; precisa caber um frame (ate 1441)
+#endif
+
 namespace mrm {
 
 // Uma task no core 1 decodifica (unico escritor do ring) e read() so copia do ring (unico leitor).
@@ -63,10 +73,11 @@ private:
         uint32_t offset;
         char path[kMaxPath];
     };
-    static constexpr size_t kRing = 16 * 1024;
-    static constexpr size_t kStack = 6 * 1024;
+    // Buffers estaticos: o device encolhe com -D quando a RAM aperta (o Bluetooth precisa de folga no heap).
+    static constexpr size_t kRing = MRM_MP3_RING_BYTES;
+    static constexpr size_t kStack = MRM_MP3_STACK_BYTES;
     static constexpr size_t kQueue = 4;
-    static constexpr size_t kIn = 4096;
+    static constexpr size_t kIn = MRM_MP3_IN_BYTES;
     static constexpr size_t kPcm = 1152 * 2; // amostras de um frame MPEG-1 estereo
 
     static void entry(void* self);
