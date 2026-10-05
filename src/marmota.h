@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Log.h"
+#include "CrashLog.h"
 #include "Battery.h"
 #include "Button.h"
 #include "Ssd1306Display.h"
