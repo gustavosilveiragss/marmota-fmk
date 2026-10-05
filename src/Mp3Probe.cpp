@@ -77,14 +77,28 @@ bool confirmed(const Source& src, uint32_t at, uint32_t header, const Frame& f) 
 }
 
 // Frame Xing/Info ou VBRI no inicio: traz o total de frames (duracao exata em VBR) e nao e audio.
-bool vbrFrames(const Source& src, uint32_t at, const Frame& f, uint32_t& frames) {
-    uint8_t b[64];
+// Do Xing tambem saem a tabela de busca e o total de bytes.
+bool vbrFrames(const Source& src, uint32_t at, const Frame& f, uint32_t& frames, Mp3Info& out) {
+    constexpr size_t kXingMax = 4 + 32 + 4 + 4 + 4 + 4 + 100; // cabecalho, side info, "Xing", flags, frames, bytes, tabela
+    uint8_t b[kXingMax];
     const size_t n = src.get(at, b, at + sizeof(b) <= src.size ? sizeof(b) : src.size - at);
     frames = 0;
     const size_t xing = 4u + f.side;
     if (n >= xing + 12 && (memcmp(b + xing, "Xing", 4) == 0 || memcmp(b + xing, "Info", 4) == 0)) {
-        if (be32(b + xing + 4) & 1)
-            frames = be32(b + xing + 8);
+        const uint32_t flags = be32(b + xing + 4);
+        size_t p = xing + 8;
+        if (flags & 1) {
+            frames = be32(b + p);
+            p += 4;
+        }
+        if ((flags & 2) && p + 4 <= n) {
+            out.audioBytes = be32(b + p);
+            p += 4;
+        }
+        if ((flags & 4) && p + sizeof(out.toc) <= n) {
+            memcpy(out.toc, b + p, sizeof(out.toc));
+            out.hasToc = true;
+        }
         return true;
     }
     if (n >= 36 + 18 && memcmp(b + 36, "VBRI", 4) == 0) {
@@ -118,13 +132,22 @@ void fill(const Source& src, uint32_t at, const Frame& f, Mp3Info& out) {
     out.channels = f.channels;
     out.kbps = f.kbps;
     out.dataOffset = at;
+    out.firstFrame = at;
     uint32_t frames = 0;
-    if (vbrFrames(src, at, f, frames))
+    if (vbrFrames(src, at, f, frames, out))
         out.dataOffset = at + f.len;
+    if (out.audioBytes <= out.dataOffset - at || out.audioBytes > src.size - at)
+        out.audioBytes = src.size - at;
     if (frames) {
         out.durationMs = static_cast<uint32_t>(uint64_t(frames) * f.samples * 1000 / f.rate);
+        // Em CBR a taxa media e exata e a tabela (passo de 1/256 do arquivo) so piora.
+        const uint64_t byRate = uint64_t(out.audioBytes) * 8 / f.kbps;
+        const uint64_t gap = byRate > out.durationMs ? byRate - out.durationMs : out.durationMs - byRate;
+        if (gap * 500 < out.durationMs)
+            out.hasToc = false;
         return;
     }
+    out.hasToc = false; // tabela sem total de frames nao diz nada sobre o tempo
     uint32_t end = src.size;
     uint8_t tag[3];
     if (end >= out.dataOffset + 128 && src.get(end - 128, tag, 3) == 3 && memcmp(tag, "TAG", 3) == 0)
@@ -133,6 +156,28 @@ void fill(const Source& src, uint32_t at, const Frame& f, Mp3Info& out) {
 }
 
 } // namespace
+
+uint32_t mp3OffsetAt(const Mp3Info& info, uint32_t ms) {
+    if (info.durationMs == 0 || ms == 0)
+        return info.dataOffset;
+    if (ms > info.durationMs)
+        ms = info.durationMs;
+    uint64_t at; // posicao desde firstFrame
+    if (info.hasToc) {
+        const uint32_t t = static_cast<uint32_t>(uint64_t(ms) * 10000 / info.durationMs); // centesimos de %
+        const uint32_t i = t / 100 < 99 ? t / 100 : 99;
+        const uint32_t lo = info.toc[i] * 100u;
+        const uint32_t hi = i < 99 ? info.toc[i + 1] * 100u : 256u * 100u;
+        const uint32_t x = hi >= lo ? lo + (hi - lo) * (t - i * 100) / 100 : lo; // x/256, vezes 100
+        at = uint64_t(info.audioBytes) * x / (256 * 100);
+    } else {
+        const uint64_t data = info.audioBytes - (info.dataOffset - info.firstFrame);
+        at = (info.dataOffset - info.firstFrame) + data * ms / info.durationMs;
+    }
+    const uint64_t pos = info.firstFrame + at;
+    const uint64_t last = uint64_t(info.firstFrame) + info.audioBytes - 1;
+    return static_cast<uint32_t>(pos < info.dataOffset ? info.dataOffset : pos > last ? last : pos);
+}
 
 bool probeMp3(Mp3ReadAt readAt, void* ctx, uint32_t fileSize, Mp3Info& out) {
     out = Mp3Info{};
