@@ -9,7 +9,7 @@ namespace ui {
 struct Cursor {
     uint8_t pos = 0;
     uint8_t prev = 0;
-    uint32_t at = 0; // millis do ultimo movimento, 0 = nunca
+    uint32_t at = 0; // millis do último movimento, 0 = nunca
 
     void reset(uint8_t to = 0) {
         pos = prev = to;

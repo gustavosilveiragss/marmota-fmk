@@ -8,15 +8,15 @@
 namespace mrm {
 namespace game {
 
-// O que o jogador pediu nas telas de tutorial, pausa e fim: descer a selecao, confirmar ou voltar.
+// O que o jogador pediu nas telas de tutorial, pausa e fim: descer a seleção, confirmar ou voltar.
 enum class Nav : uint8_t { None,
                            Down,
                            Confirm,
                            Back };
 
-// Conduz uma partida: tutorial (so na primeira vez de cada jogo), contagem, jogo, pausa e fim.
-// Os jogos so simulam e desenham; menu, pausa e recorde ficam aqui. Dentro do jogo as teclas sao
-// lidas cruas (segurado/solto); os gestos de Nav so valem nos menus.
+// Conduz uma partida: tutorial (só na primeira vez de cada jogo), contagem, jogo, pausa e fim.
+// Os jogos só simulam e desenham. Menu, pausa e recorde ficam aqui. Dentro do jogo as teclas são
+// lidas cruas (segurado/solto), e os gestos de Nav só valem nos menus.
 class GameHost {
 public:
     // `games` fica com o chamador e deve viver mais que o host.
@@ -63,7 +63,7 @@ private:
     bool prevA_ = false;
     bool prevB_ = false;
     bool fromPause_ = false;
-    bool armed_ = false; // as duas teclas ja foram soltas desde que a fase comecou
+    bool armed_ = false; // as duas teclas já foram soltas desde que a fase começou
     uint8_t page_ = 0;
     bool record_ = false;
     bool exited_ = false;

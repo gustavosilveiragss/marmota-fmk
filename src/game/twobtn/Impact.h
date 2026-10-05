@@ -6,7 +6,7 @@ namespace mrm {
 namespace game {
 namespace twobtn {
 
-// Space Impact do Nokia: A sobe a nave, B desce, o tiro e automatico. Ondas de naves e um chefe.
+// Space Impact do Nokia: A sobe a nave, B desce, o tiro e automático. Ondas de naves e um chefe.
 class Impact : public Game {
 public:
     const GameText& text() const override;

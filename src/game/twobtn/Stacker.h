@@ -6,7 +6,7 @@ namespace mrm {
 namespace game {
 namespace twobtn {
 
-// Torre: um bloco vai e volta, A solta, B freia (3 por partida). A sobra cai e o proximo vem menor.
+// Torre: um bloco vai e volta, A solta, B freia (3 por partida). A sobra cai e o próximo vem menor.
 class Stacker : public Game {
 public:
     const GameText& text() const override;
@@ -18,7 +18,7 @@ public:
     uint16_t score() const override { return score_; }
 
 private:
-    static constexpr uint8_t kRing = 13; // andares guardados: mais que os visiveis
+    static constexpr uint8_t kRing = 13; // andares guardados: mais que os visíveis
 
     void drop();
     void startBlock();
@@ -29,7 +29,7 @@ private:
     uint8_t w_[kRing];
     int16_t pos_ = 0; // bloco atual em 1/16 de pixel
     int16_t vel_ = 0;
-    uint16_t floors_ = 0; // andares empilhados, o bloco atual e o proximo
+    uint16_t floors_ = 0; // andares empilhados, o bloco atual e o próximo
     uint16_t score_ = 0;
     uint8_t blockW_ = 0;
     uint8_t brakes_ = 0;

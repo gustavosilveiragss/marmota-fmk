@@ -30,6 +30,7 @@ bool Mp3Stream::begin(fs::FS& fs) {
         log("Mp3Stream: helix sem memoria");
         return false;
     }
+
     ring_ = xStreamBufferCreateStatic(kRing, 1, ringStore_, &ringBuf_);
     queue_ = xQueueCreateStatic(kQueue, sizeof(Cmd), queueStore_, &queueBuf_);
     task_ = xTaskCreateStaticPinnedToCore(entry, "mp3dec", kStack, this, kPriority, stack_, &tcb_, kCore);
@@ -41,6 +42,7 @@ bool Mp3Stream::send(Op op, const char* path, uint32_t offset, uint32_t rate) {
         return false;
     Cmd c{op, seq_ + 1, offset, rate, {}};
     strlcpy(c.path, path, sizeof(c.path));
+
     if (xQueueSend(queue_, &c, kSendWait) != pdTRUE)
         return false;
     seq_ = c.seq;
@@ -84,22 +86,26 @@ uint32_t Mp3Stream::stackFree() const {
     return task_ ? uxTaskGetStackHighWaterMark(task_) : 0;
 }
 
-// Roda na task do A2DP: nada de bloquear. Leituras sempre em multiplos de 4 (um frame estereo) e o
-// ring tem capacidade multipla de 4, entao as escritas parciais tambem ficam alinhadas.
+// Roda na task do A2DP: nada de bloquear. Leituras sempre em múltiplos de 4 (um frame estéreo) e o
+// ring tem capacidade múltipla de 4, então as escritas parciais também ficam alinhadas.
 int32_t Mp3Stream::read(uint8_t* data, int32_t len) {
     if (!data || len <= 0)
         return 0;
+
     const size_t want = static_cast<size_t>(len) & ~size_t(3);
     uint32_t r = read_.load(std::memory_order_relaxed);
     for (;;) { // descarta o que sobrou da faixa anterior
         const int32_t stale = static_cast<int32_t>(boundary_.load(std::memory_order_acquire) - r);
         if (stale <= 0)
             break;
+
         const size_t n = xStreamBufferReceive(ring_, data, min<size_t>(stale, want), 0);
         if (n == 0)
             break;
+
         r += n;
     }
+
     size_t got = 0;
     if (playing_ && !silent_ && primed_) {
         got = xStreamBufferReceive(ring_, data, want, 0);
@@ -107,6 +113,7 @@ int32_t Mp3Stream::read(uint8_t* data, int32_t len) {
         if (got < want && !eof_)
             underruns_.fetch_add(1, std::memory_order_relaxed);
     }
+
     read_.store(r, std::memory_order_release);
     memset(data + got, 0, len - got);
     return len;
@@ -124,12 +131,13 @@ void Mp3Stream::run() {
                 apply(c);
             continue;
         }
+
         if (poll())
             decode();
     }
 }
 
-// Comandos entre frames e durante o envio. Pausa segura a task aqui ate o proximo comando; true se a
+// Comandos entre frames e durante o envio. Pausa segura a task aqui até o próximo comando; true se a
 // faixa atual segue (play e stop trocam o arquivo e o resto do frame vai fora).
 bool Mp3Stream::poll() {
     Cmd c;
@@ -138,6 +146,7 @@ bool Mp3Stream::poll() {
         if (c.op == Op::Play || c.op == Op::Stop)
             return false;
     }
+
     return true;
 }
 
@@ -147,24 +156,30 @@ void Mp3Stream::apply(const Cmd& c) {
         paused_ = true;
         silent_ = true;
         break;
+
     case Op::Resume:
         paused_ = false;
         silent_ = false;
         break;
+
     case Op::Play:
     case Op::Stop:
         playing_ = false;
         boundary_.store(written_.load(), std::memory_order_release);
+
         eof_ = false;
         primed_ = false;
         paused_ = false;
         silent_ = false;
         badRun_ = 0;
+
         inPtr_ = in_;
         inLeft_ = 0;
         fileDone_ = true;
+
         if (file_)
             file_.close();
+
         if (c.op == Op::Play) {
             rate_ = c.rate;
             resample_.reset();
@@ -173,16 +188,20 @@ void Mp3Stream::apply(const Cmd& c) {
             eof_ = fileDone_; // arquivo sumiu: a faixa termina na hora e o player segue
             playing_ = true;
         }
+
         break;
     }
+
     ack_.store(c.seq);
 }
 
 void Mp3Stream::refill() {
     if (fileDone_ || inLeft_ >= MAINBUF_SIZE)
         return;
+
     memmove(in_, inPtr_, inLeft_);
     inPtr_ = in_;
+
     const int n = file_.read(in_ + inLeft_, kIn - inLeft_);
     if (n <= 0)
         fileDone_ = true;
@@ -199,14 +218,16 @@ void Mp3Stream::finish() {
 
 void Mp3Stream::decode() {
     refill();
+
     const int sync = inLeft_ > 0 ? MP3FindSyncWord(inPtr_, inLeft_) : -1;
     if (sync < 0) {
         if (fileDone_)
             return finish();
-        inPtr_ += inLeft_ - 1; // guarda o ultimo byte: pode ser o comeco de um sync
+        inPtr_ += inLeft_ - 1; // guarda o último byte: pode ser o começo de um sync
         inLeft_ = 1;
         return;
     }
+
     inPtr_ += sync;
     inLeft_ -= sync;
     uint8_t* before = inPtr_;
@@ -215,34 +236,42 @@ void Mp3Stream::decode() {
     const uint32_t us = micros() - t0;
     MP3FrameInfo fi;
     MP3GetLastFrameInfo(dec_, &fi);
+
     if (err == ERR_MP3_MAINDATA_UNDERFLOW)
-        return; // normal nos primeiros frames: o reservatorio de bits ainda esta vazio
+        return; // normal nos primeiros frames: o reservatório de bits ainda está vazio
+
     if (err == ERR_MP3_INDATA_UNDERFLOW && fileDone_)
-        return finish(); // ultimo frame cortado
+        return finish(); // último frame cortado
+
     if (err != ERR_MP3_NONE || fi.samprate != static_cast<int>(rate_) || fi.outputSamps <= 0) {
         ++stats_.errors;
-        if (inPtr_ == before) { // nao andou: pula o sync falso
+        if (inPtr_ == before) { // não andou: pula o sync falso
             ++inPtr_;
             --inLeft_;
         }
+
         if (++badRun_ > kMaxBadRun)
             finish(); // arquivo corrompido: vira fim de faixa
         return;
     }
+
     badRun_ = 0;
     ++stats_.frames;
     stats_.busyUs += us;
     stats_.maxUs = max(stats_.maxUs, us);
+
     size_t samples = fi.outputSamps;
-    if (fi.nChans == 1) { // mono: duplica de tras para frente no mesmo buffer
+    if (fi.nChans == 1) { // mono: duplica de trás para frente no mesmo buffer
         for (size_t i = samples; i-- > 0;)
             pcm_[2 * i] = pcm_[2 * i + 1] = pcm_[i];
         samples *= 2;
     }
+
     if (rate_ == kRate) {
         push(reinterpret_cast<const uint8_t*>(pcm_), samples * sizeof(int16_t));
         return;
     }
+
     bool pushing = true; // push() devolve false quando um comando interrompe: o resto do frame se perde
     resample_.feed(pcm_, samples / 2, [&](const int16_t* out, size_t frames) {
         if (pushing)
@@ -257,11 +286,13 @@ bool Mp3Stream::push(const uint8_t* p, size_t n) {
         written_.fetch_add(k, std::memory_order_release);
         p += k;
         n -= k;
+
         if (written_.load() - boundary_.load() >= kPrime)
             primed_ = true;
         if (!poll())
             return false;
     }
+
     return true;
 }
 

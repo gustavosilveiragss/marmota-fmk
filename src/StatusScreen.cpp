@@ -7,8 +7,8 @@ namespace {
 constexpr int16_t kPad = 2;
 constexpr int16_t kBarHeight = 12;
 constexpr int16_t kBarTextY = 1;
-constexpr int16_t kPitch = 12;    // espacamento das linhas do corpo
-constexpr uint8_t kPageSteps = 3; // draws por pagina quando as linhas estouram o painel
+constexpr int16_t kPitch = 12;    // espaçamento das linhas do corpo
+constexpr uint8_t kPageSteps = 3; // draws por página quando as linhas estouram o painel
 
 constexpr int16_t kWifiW = 8;
 constexpr int16_t kWifiH = 8;
@@ -42,8 +42,10 @@ void StatusScreen::draw(const Config& config, uint8_t step) {
         oled.drawXbm(kPad, kWifiY, kWifiW, kWifiH, kWifi[step % kWifiFrames]);
         titleX += kWifiW + kPad;
     }
+
     oled.setTextAlignment(TEXT_ALIGN_LEFT);
     oled.drawString(titleX, kBarTextY, config.title);
+
     if (config.showBattery) {
         oled.setTextAlignment(TEXT_ALIGN_RIGHT);
         oled.drawString(width - kPad, kBarTextY, String(config.battery) + "%");
@@ -51,12 +53,14 @@ void StatusScreen::draw(const Config& config, uint8_t step) {
 
     oled.setColor(WHITE);
     oled.setTextAlignment(TEXT_ALIGN_CENTER);
+
     const int16_t top = kBarHeight + 1;
     const int16_t fit = (height - top) / kPitch;
     if (fit > 0 && config.lineCount > 0) {
         const uint8_t perPage = fit < config.lineCount ? uint8_t(fit) : config.lineCount;
         const uint8_t pages = (config.lineCount + perPage - 1) / perPage;
         const uint8_t page = pages > 1 ? (step / kPageSteps) % pages : 0;
+
         for (uint8_t i = 0; i < perPage; ++i) {
             const uint8_t index = page * perPage + i;
             if (index >= config.lineCount)

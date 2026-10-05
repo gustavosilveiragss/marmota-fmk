@@ -14,7 +14,7 @@ float lerp(float a, float b, float t) {
     return a + (b - a) * t;
 }
 
-// Progresso de uma transicao que comecou em `at`; 1 se nunca aconteceu.
+// Progresso de uma transição que começou em `at`, ou 1 se nunca aconteceu.
 float eased(uint32_t now, uint32_t at, uint32_t duration) {
     return at == 0 ? 1.0f : gfx::easeOut(progressOf(now - at, duration));
 }
@@ -29,17 +29,32 @@ void centered(Panel& o, const uint8_t* font, int16_t cx, int16_t y, const char* 
     o.drawText(cx, y, text);
 }
 
-// Encurta com "." no fim ate caber, sem alocar.
+void fitText(Panel& o, char* text, size_t size, int16_t maxWidth, const char* ending) {
+    size_t len = strlen(text);
+    while (len > 1 && textWidth(o, text) > maxWidth) {
+        --len;
+
+        while (len > 1 && (text[len] & 0xC0) == 0x80) // não corta no meio de um caractere UTF-8
+            --len;
+
+        strlcpy(text + len, ending, size - len);
+    }
+}
+
+// Encurta com "." no fim até caber, sem alocar.
 void clipped(Panel& o, int16_t x, int16_t y, const char* text, int16_t maxWidth) {
     char buf[kClipLen + 1];
     strlcpy(buf, text, sizeof(buf));
     size_t len = strlen(buf);
     while (len > 1 && textWidth(o, buf) > maxWidth) {
         buf[--len] = '\0';
-        while (len > 1 && (buf[len - 1] & 0xC0) == 0x80) // nao corta no meio de um caractere UTF-8
+
+        while (len > 1 && (buf[len - 1] & 0xC0) == 0x80) // não corta no meio de um caractere UTF-8
             buf[--len] = '\0';
+
         buf[len - 1] = '.';
     }
+
     o.setTextAlignment(TEXT_ALIGN_LEFT);
     o.drawText(x, y, buf);
 }
@@ -65,13 +80,16 @@ void hintBar(Panel& o, const Hint* items, uint8_t count) {
         const int16_t keyW = textWidth(o, items[i].key) + 2 * kKeyPad;
         o.setColor(BLACK);
         o.fillRect(x, 1, keyW, 10);
+
         o.setColor(WHITE);
         o.setTextAlignment(TEXT_ALIGN_LEFT);
         o.drawText(x + kKeyPad, 0, items[i].key);
         o.setColor(BLACK);
         o.drawText(x + keyW + 3, 0, items[i].label);
+
         x += keyW + 3 + textWidth(o, items[i].label) + kGap;
     }
+
     o.setColor(WHITE);
 }
 

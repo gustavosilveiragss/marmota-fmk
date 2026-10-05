@@ -7,30 +7,30 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "UploadVerdict.h"
+
 namespace mrm {
 
-// Recebe um arquivo em fatias (corpo cru de um POST): grava num tmp, valida o conteudo se pedido e
-// so no finish() faz rename para dir/name. Nunca sobrescreve e apaga o tmp em qualquer erro.
+// Recebe um arquivo em fatias (corpo cru de um POST): grava num tmp, valida o conteúdo se pedido e
+// só no finish() faz rename para dir/name. Nunca sobrescreve e apaga o tmp em qualquer erro.
 class UploadSink {
 public:
     enum class Error : uint8_t { None, Name, Space, Exists, Io, Rejected, Aborted };
-    enum class Verdict : uint8_t { Need, Ok, Bad };
+    using Verdict = UploadVerdict;
 
-    using FreeFn = uint64_t (*)(void* ctx);                                   // bytes livres no FS
+    using FreeFn = uint64_t (*)();                                 // bytes livres no FS
     using CheckFn = Verdict (*)(void* ctx, const uint8_t* data, size_t size); // fatias em ordem
 
     struct Config {
         const char* tmpPath = "/music/.up.tmp";
         uint32_t reserve = 64 * 1024; // livre que sobra depois do arquivo (config.json no mesmo FS)
-        FreeFn freeBytes = nullptr;   // nullptr: nao confere espaco
-        void* freeCtx = nullptr;
-        CheckFn check = nullptr; // nullptr: aceita qualquer conteudo
+        FreeFn freeBytes = nullptr;   // nullptr: não confere espaço
+        CheckFn check = nullptr; // nullptr: aceita qualquer conteúdo
         void* checkCtx = nullptr;
-        bool acceptUndecided = false; // arquivo acabou ainda em Need
     };
 
     struct Target {
-        const char* dir; // pasta de destino, ja validada pelo chamador
+        const char* dir; // pasta de destino, já validada pelo chamador
         const char* name;
         uint32_t size; // tamanho declarado
     };

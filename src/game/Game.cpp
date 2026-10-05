@@ -8,6 +8,7 @@ namespace game {
 void hud(Panel& o, uint16_t score, uint8_t lives) {
     for (uint8_t i = 0; i < lives; ++i)
         o.fillCircle(4 + i * 8, 5, 2);
+
     char text[8];
     snprintf(text, sizeof(text), "%u", score);
     o.setFont(ArialMT_Plain_10);

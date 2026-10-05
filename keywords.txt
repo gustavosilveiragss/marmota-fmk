@@ -29,14 +29,8 @@ deepSleepOnButton	KEYWORD2
 fsMount	KEYWORD2
 logBegin	KEYWORD2
 drawIcon	KEYWORD2
-drawIconReveal	KEYWORD2
-drawIconDither	KEYWORD2
-arcUp	KEYWORD2
-wifiArcs	KEYWORD2
-ping	KEYWORD2
-thickLine	KEYWORD2
+drawClip	KEYWORD2
 ditherRect	KEYWORD2
 flapCover	KEYWORD2
-invertFlash	KEYWORD2
 Locale	KEYWORD1
 Lang	KEYWORD1

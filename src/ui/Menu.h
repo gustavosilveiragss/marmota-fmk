@@ -6,7 +6,7 @@
 namespace mrm {
 namespace ui {
 
-// Uma linha de menu: rotulo a esquerda e, a direita, um interruptor, um texto ou barras de sinal.
+// Uma linha de menu: rótulo a esquerda e, a direita, um interruptor, um texto ou barras de sinal.
 struct Row {
     const char* label = "";
     const char* value = nullptr;
@@ -24,7 +24,7 @@ struct Menu {
     uint8_t count;
 };
 
-// Barra de instrucoes, titulo e uma lista rolavel de 3 linhas com o cursor deslizando.
+// Barra de instruções, título e uma lista rolável de 3 linhas com o cursor deslizando.
 void menuScreen(Panel& o, const Cursor& cursor, uint32_t now, const Menu& m);
 
 } // namespace ui

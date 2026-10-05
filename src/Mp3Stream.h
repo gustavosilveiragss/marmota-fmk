@@ -1,8 +1,8 @@
 #pragma once
 
-// MP3 de um arquivo para PCM 16 bits estereo 44,1 kHz num ring, lido por quem entrega o audio (o
-// callback do A2DP). So existe quando o projeto traz a libhelix em lib_deps; sem ela este header e o
-// .cpp ficam vazios e o fmk nao paga flash nem RAM.
+// MP3 de um arquivo para PCM 16 bits estéreo 44,1 kHz num ring, lido por quem entrega o áudio (o
+// callback do A2DP). Só existe quando o projeto traz a libhelix em lib_deps; sem ela este header e o
+// .cpp ficam vazios e o fmk não paga flash nem RAM.
 #if __has_include("libhelix-mp3/mp3dec.h") && __has_include(<FS.h>)
 #define MRM_HAS_MP3_STREAM 1
 
@@ -23,20 +23,20 @@
 #define MRM_MP3_STACK_BYTES (6 * 1024)
 #endif
 #ifndef MRM_MP3_IN_BYTES
-#define MRM_MP3_IN_BYTES 4096 // bytes de MP3 lidos do arquivo; precisa caber um frame (ate 1441)
+#define MRM_MP3_IN_BYTES 4096 // bytes de MP3 lidos do arquivo; precisa caber um frame (até 1441)
 #endif
 
 namespace mrm {
 
-// Uma task no core 1 decodifica (unico escritor do ring) e read() so copia do ring (unico leitor).
-// Tudo estatico: ring de 16 KB (~93 ms de audio), pilha, fila de comandos e buffers. O helix aloca o
+// Uma task no core 1 decodifica (único escritor do ring) e read() só copia do ring (único leitor).
+// Tudo estático: ring de 16 KB (~93 ms de áudio), pilha, fila de comandos e buffers. O helix aloca o
 // estado dele uma vez em begin().
 class Mp3Stream {
 public:
-    static constexpr uint32_t kRate = 44100; // saida para o Bluetooth; faixas a 48 kHz sao convertidas
+    static constexpr uint32_t kRate = 44100; // saída para o Bluetooth; faixas a 48 kHz são convertidas
     static constexpr size_t kMaxPath = 128;
 
-    // Diagnostico do decoder (teste de banda); so a task escreve.
+    // Diagnóstico do decoder (teste de banda); só a task escreve.
     struct Stats {
         uint32_t frames = 0;
         uint32_t busyUs = 0; // soma do tempo dentro do MP3Decode
@@ -44,15 +44,15 @@ public:
         uint32_t errors = 0; // frames descartados
     };
 
-    bool begin(fs::FS& fs); // false se o helix nao conseguiu memoria
-    // Troca a faixa: abre path, pula ate info.dataOffset e decodifica. false se a taxa nao for
-    // 44,1 ou 48 kHz, o caminho nao couber ou a fila estiver cheia.
+    bool begin(fs::FS& fs); // false se o helix não conseguiu memória
+    // Troca a faixa: abre path, pula até info.dataOffset e decodifica. false se a taxa não for
+    // 44,1 ou 48 kHz, o caminho não couber ou a fila estiver cheia.
     bool start(const char* path, const Mp3Info& info);
-    void pause(); // read() entrega silencio sem consumir o ring
+    void pause(); // read() entrega silêncio sem consumir o ring
     void resume();
-    void stop(); // BLOQUEIA ate a task fechar o arquivo (~20 ms): depois disso o arquivo pode sumir
+    void stop(); // BLOQUEIA até a task fechar o arquivo (~20 ms): depois disso o arquivo pode sumir
 
-    // So para o callback do audio. Sempre devolve len (silencio onde nao ha musica); (nullptr, -1)
+    // Só para o callback do áudio. Sempre devolve len (silêncio onde não há música); (nullptr, -1)
     // da pilha A2DP ao esvaziar a fila devolve 0.
     int32_t read(uint8_t* data, int32_t len);
 
@@ -75,12 +75,12 @@ private:
         uint32_t rate; // taxa do arquivo
         char path[kMaxPath];
     };
-    // Buffers estaticos: o device encolhe com -D quando a RAM aperta (o Bluetooth precisa de folga no heap).
+    // Buffers estáticos: o device encolhe com -D quando a RAM aperta (o Bluetooth precisa de folga no heap).
     static constexpr size_t kRing = MRM_MP3_RING_BYTES;
     static constexpr size_t kStack = MRM_MP3_STACK_BYTES;
     static constexpr size_t kQueue = 4;
     static constexpr size_t kIn = MRM_MP3_IN_BYTES;
-    static constexpr size_t kPcm = 1152 * 2; // amostras de um frame MPEG-1 estereo
+    static constexpr size_t kPcm = 1152 * 2; // amostras de um frame MPEG-1 estéreo
 
     static void entry(void* self);
     void run();
@@ -105,17 +105,17 @@ private:
     bool paused_ = false;
     uint16_t badRun_ = 0; // erros seguidos: arquivo corrompido vira fim
     Stats stats_;
-    uint32_t rate_ = kRate; // da faixa atual; so a task
+    uint32_t rate_ = kRate; // da faixa atual; só a task
     Resample48to44 resample_;
 
-    uint32_t seq_ = 0; // so o loop
+    uint32_t seq_ = 0; // só o loop
     std::atomic<uint32_t> ack_{0};
-    std::atomic<uint32_t> written_{0};  // bytes que a task pos no ring (so a task)
-    std::atomic<uint32_t> read_{0};     // bytes que read() tirou do ring (so o callback)
-    std::atomic<uint32_t> boundary_{0}; // written_ no inicio da faixa: antes disso e faixa velha
+    std::atomic<uint32_t> written_{0};  // bytes que a task pôs no ring (só a task)
+    std::atomic<uint32_t> read_{0};     // bytes que read() tirou do ring (só o callback)
+    std::atomic<uint32_t> boundary_{0}; // written_ no início da faixa: antes disso e faixa velha
     std::atomic<bool> playing_{false};
-    std::atomic<bool> silent_{false}; // pausado: read() nao consome
-    std::atomic<bool> primed_{false}; // ring com folga para comecar sem engasgo
+    std::atomic<bool> silent_{false}; // pausado: read() não consome
+    std::atomic<bool> primed_{false}; // ring com folga para começar sem engasgo
     std::atomic<bool> eof_{false};
     std::atomic<uint32_t> underruns_{0};
 

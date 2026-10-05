@@ -6,7 +6,7 @@ namespace mrm {
 namespace game {
 namespace twobtn {
 
-// Ritmo: notas descem em duas pistas, A toca a da esquerda e B a da direita; segurar sustenta notas longas.
+// Ritmo: notas descem em duas pistas, A toca a da esquerda e B a da direita. Segurar sustenta notas longas.
 class Rhythm : public Game {
 public:
     const GameText& text() const override;
@@ -20,8 +20,8 @@ public:
 private:
     static constexpr uint8_t kQueue = 16;
     struct Note {
-        int8_t t;     // ticks ate a cabeca cruzar a linha (negativo: ja passou)
-        uint8_t info; // bit 0 pista, bits 1 a 5 duracao em ticks, bit 6 acertada, bit 7 encerrada
+        int8_t t;     // ticks até a cabeça cruzar a linha (negativo: já passou)
+        uint8_t info; // bit 0 pista, bits 1 a 5 duração em ticks, bit 6 acertada, bit 7 encerrada
     };
 
     static bool lane(const Note& n) { return n.info & 1; }
@@ -40,7 +40,7 @@ private:
     Note notes_[kQueue];
     uint8_t first_ = 0;
     uint8_t count_ = 0;
-    int16_t gap_ = 0; // ticks ate a proxima nota planejada cruzar a linha
+    int16_t gap_ = 0; // ticks até a próxima nota planejada cruzar a linha
     uint8_t nextLane_ = 0;
     uint8_t nextLen_ = 0;
     uint16_t planned_ = 0;

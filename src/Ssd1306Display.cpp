@@ -21,6 +21,7 @@ void Ssd1306Display::reinit() {
 void Ssd1306Display::applyDefaults() {
     if (config_.flip)
         oled_.flipScreenVertically();
+
     if (config_.contrast)
         oled_.setContrast(config_.contrast);
     oled_.setFont(ArialMT_Plain_10);
@@ -31,7 +32,7 @@ void Ssd1306Display::applyDefaults() {
 void Ssd1306Display::on() {
     oled_.displayOn();
     if (config_.contrast)
-        oled_.setContrast(config_.contrast); // displayOn reemite o padrao da lib
+        oled_.setContrast(config_.contrast); // displayOn reemite o padrão da lib
 }
 
 void Ssd1306Display::off() {

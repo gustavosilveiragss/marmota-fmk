@@ -6,10 +6,66 @@ namespace mrm {
 
 namespace {
 
-constexpr uint8_t kMaxFrames = 64; // cabecalhos percorridos ate achar o TPE1
-constexpr size_t kRaw = 128;       // bytes do frame lidos: cobre kMaxArtistLen em UTF-16
+constexpr uint8_t kMaxFrames = 64;          // cabeçalhos percorridos até achar o TPE1
+constexpr size_t kRawBytes = 128;           // bytes do frame lidos: cobre kMaxArtistLen em UTF-16
+constexpr size_t kId3TagHeaderBytes = 10;   // "ID3", versão, flags, tamanho
+constexpr size_t kId3FrameHeaderBytes = 10; // id, tamanho, 2 bytes de flags
+constexpr size_t kTagSizeAt = 6;
+constexpr size_t kFrameSizeAt = 4;
+constexpr size_t kExtendedSizeBytes = 4;
+constexpr uint8_t kTagFlagUnsync = 0x80;
+constexpr uint8_t kTagFlagExtended = 0x40;
+constexpr uint8_t kV24FrameCompressedOrEncrypted = 0x0C;
+constexpr uint8_t kV24FrameGrouping = 0x40;
+constexpr uint8_t kV24FrameDataLength = 0x01;
+constexpr uint8_t kV24FrameUnsync = 0x02;
+constexpr uint8_t kV23FrameCompressedOrEncrypted = 0xC0;
+constexpr uint8_t kV23FrameGrouping = 0x20;
+constexpr size_t kDataLengthBytes = 4;
+constexpr size_t kId3v1Bytes = 128;
+constexpr size_t kId3v1ArtistAt = 33;
+constexpr size_t kId3v1ArtistBytes = 30;
+constexpr size_t kId3v1ReadBytes = kId3v1ArtistAt + kId3v1ArtistBytes; // "TAG", título (30), artista (30)
 
-// Acumula code points como UTF-8 de Latin-1: o glifo que a fonte nao tem vira um unico '?'.
+constexpr uint32_t kBom = 0xFEFF;
+constexpr uint32_t kReplacement = 0xFFFD;
+constexpr uint32_t kBeyondLatin1 = 0x10000;
+constexpr uint32_t kLatin1Max = 0xFF;
+constexpr uint32_t kC1First = 0x7F;
+constexpr uint32_t kC1Last = 0xA0;
+constexpr uint32_t kHighSurrogate = 0xD800;
+constexpr uint32_t kLowSurrogate = 0xDC00;
+constexpr uint32_t kSurrogateEnd = 0xE000;
+constexpr uint32_t kSurrogateMask = 0xFC00;
+
+enum Encoding : uint8_t { kLatin1,
+                          kUtf16Bom,
+                          kUtf16Be,
+                          kUtf8,
+                          kEncodingCount };
+
+struct Punctuation {
+    uint16_t from;
+    char ascii;
+};
+// Tipográficos que o OLED não tem viram o ASCII mais próximo.
+constexpr Punctuation kPunctuationMap[] = {
+    {0x2018, '\''},
+    {0x2019, '\''},
+    {0x201C, '"'},
+    {0x201D, '"'},
+    {0x2013, '-'},
+    {0x2014, '-'},
+};
+
+uint32_t mapPunctuation(uint32_t codePoint) {
+    for (const Punctuation& entry : kPunctuationMap)
+        if (entry.from == codePoint)
+            return static_cast<uint32_t>(entry.ascii);
+    return codePoint;
+}
+
+// Acumula code points como UTF-8 de Latin-1: o glifo que a fonte não tem vira um único '?'.
 class Utf8Out {
 public:
     Utf8Out(char* buf, size_t cap)
@@ -18,32 +74,33 @@ public:
         buf_[0] = '\0';
     }
 
-    void put(uint32_t cp) {
-        if (cp == 0xFEFF || cp < 0x20 || (cp >= 0x7F && cp < 0xA0) || (cp == ' ' && len_ == 0))
+    void put(uint32_t codePoint) {
+        if (codePoint == kBom || codePoint < ' ' || (codePoint >= kC1First && codePoint < kC1Last) ||
+            (codePoint == ' ' && len_ == 0))
             return;
-        if (cp == 0x2018 || cp == 0x2019)
-            cp = '\'';
-        else if (cp == 0x201C || cp == 0x201D)
-            cp = '"';
-        else if (cp == 0x2013 || cp == 0x2014)
-            cp = '-';
-        const bool lost = cp > 0xFF;
+
+        codePoint = mapPunctuation(codePoint);
+        const bool lost = codePoint > kLatin1Max;
         if (lost && lostLast_)
             return;
+
         lostLast_ = lost;
         if (lost)
-            cp = '?';
-        const size_t need = cp < 0x80 ? 1 : 2;
+            codePoint = '?';
+
+        const size_t need = codePoint < 0x80 ? 1 : 2;
         if (full_ || len_ + need > cap_) {
             full_ = true;
             return;
         }
+
         if (need == 1) {
-            buf_[len_++] = static_cast<char>(cp);
+            buf_[len_++] = static_cast<char>(codePoint);
         } else {
-            buf_[len_++] = static_cast<char>(0xC0 | (cp >> 6));
-            buf_[len_++] = static_cast<char>(0x80 | (cp & 0x3F));
+            buf_[len_++] = static_cast<char>(0xC0 | (codePoint >> 6));
+            buf_[len_++] = static_cast<char>(0x80 | (codePoint & 0x3F));
         }
+
         buf_[len_] = '\0';
     }
 
@@ -61,170 +118,226 @@ private:
     bool full_ = false;
 };
 
-void decodeLatin1(const uint8_t* p, size_t n, Utf8Out& out) {
-    for (size_t i = 0; i < n && p[i]; ++i)
-        out.put(p[i]);
+void decodeLatin1(const uint8_t* bytes, size_t count, Utf8Out& out) {
+    for (size_t i = 0; i < count && bytes[i]; ++i)
+        out.put(bytes[i]);
 }
 
-void decodeUtf8(const uint8_t* p, size_t n, Utf8Out& out) {
-    for (size_t i = 0; i < n && p[i];) {
-        const uint8_t b = p[i];
-        const size_t len = b < 0x80 ? 1 : (b & 0xE0) == 0xC0 ? 2 : (b & 0xF0) == 0xE0 ? 3 : (b & 0xF8) == 0xF0 ? 4 : 0;
+void decodeUtf8(const uint8_t* bytes, size_t count, Utf8Out& out) {
+    for (size_t i = 0; i < count && bytes[i];) {
+        const uint8_t byte = bytes[i];
+        const size_t len = byte < 0x80 ? 1 : (byte & 0xE0) == 0xC0 ? 2
+                                         : (byte & 0xF0) == 0xE0   ? 3
+                                         : (byte & 0xF8) == 0xF0   ? 4
+                                                                   : 0;
+
         if (len == 0) {
-            out.put(0xFFFD);
+            out.put(kReplacement);
             ++i;
             continue;
         }
-        if (i + len > n)
-            return; // sequencia cortada pelo fim do texto
-        uint32_t cp = len == 1 ? b : b & (0x7F >> len);
+
+        if (i + len > count)
+            return; // sequência cortada pelo fim do texto
+        uint32_t codePoint = len == 1 ? byte : byte & (0x7F >> len);
         for (size_t k = 1; k < len; ++k)
-            cp = (cp << 6) | (p[i + k] & 0x3F);
-        out.put(cp);
+            codePoint = (codePoint << 6) | (bytes[i + k] & 0x3F);
+        out.put(codePoint);
         i += len;
     }
 }
 
-void decodeUtf16(const uint8_t* p, size_t n, bool bigEndian, Utf8Out& out) {
+void decodeUtf16(const uint8_t* bytes, size_t count, bool bigEndian, Utf8Out& out) {
     size_t i = 0;
-    if (n >= 2 && p[0] == 0xFF && p[1] == 0xFE) { // o BOM manda; sem BOM vale o padrao da codificacao
+    if (count >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) { // o BOM manda; sem BOM vale o padrão da codificação
         bigEndian = false;
         i = 2;
-    } else if (n >= 2 && p[0] == 0xFE && p[1] == 0xFF) {
+    } else if (count >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) {
         bigEndian = true;
         i = 2;
     }
-    auto unit = [&](size_t at) { return bigEndian ? (p[at] << 8) | p[at + 1] : (p[at + 1] << 8) | p[at]; };
-    for (; i + 2 <= n; i += 2) {
+
+    auto unit = [&](size_t at) { return bigEndian ?
+        (bytes[at] << 8) | bytes[at + 1] : (bytes[at + 1] << 8) | bytes[at]; };
+    for (; i + 2 <= count; i += 2) {
         uint32_t u = unit(i);
         if (u == 0)
             return;
-        if (u >= 0xD800 && u < 0xDC00 && i + 4 <= n && (unit(i + 2) & 0xFC00) == 0xDC00) {
-            u = 0x10000; // fora do Latin-1 de qualquer jeito
+
+        if (u >= kHighSurrogate && u < kLowSurrogate && i + 4 <= count &&
+            (unit(i + 2) & kSurrogateMask) == kLowSurrogate) {
+            u = kBeyondLatin1; // fora do Latin-1 de qualquer jeito
             i += 2;
-        } else if (u >= 0xD800 && u < 0xE000) {
-            u = 0xFFFD;
+        } else if (u >= kHighSurrogate && u < kSurrogateEnd) {
+            u = kReplacement;
         }
+
         out.put(u);
     }
 }
 
-// Valor: byte de codificacao e texto ate o primeiro terminador (o primeiro de varios artistas).
-bool decodeText(const uint8_t* p, size_t n, Utf8Out& out) {
-    if (n < 2 || p[0] > 3)
+// Valor: byte de codificação e texto até o primeiro terminador (o primeiro de vários artistas).
+bool decodeText(const uint8_t* bytes, size_t count, Utf8Out& out) {
+    if (count < 2 || bytes[0] >= kEncodingCount)
         return false;
-    switch (p[0]) {
-    case 0: decodeLatin1(p + 1, n - 1, out); break;
-    case 1: decodeUtf16(p + 1, n - 1, false, out); break;
-    case 2: decodeUtf16(p + 1, n - 1, true, out); break;
-    default: decodeUtf8(p + 1, n - 1, out); break;
+
+    switch (bytes[0]) {
+    case kLatin1:
+        decodeLatin1(bytes + 1, count - 1, out);
+        break;
+
+    case kUtf16Bom:
+        decodeUtf16(bytes + 1, count - 1, false, out);
+        break;
+
+    case kUtf16Be:
+        decodeUtf16(bytes + 1, count - 1, true, out);
+        break;
+
+    default:
+        decodeUtf8(bytes + 1, count - 1, out);
+        break;
     }
+
     return out.finish();
 }
 
-bool synchsafe(const uint8_t* b, uint32_t& out) {
+bool synchsafe(const uint8_t* byte, uint32_t& out) {
     out = 0;
     for (int k = 0; k < 4; ++k) {
-        if (b[k] & 0x80)
+        if (byte[k] & 0x80)
             return false;
-        out = (out << 7) | b[k];
+        out = (out << 7) | byte[k];
     }
+
     return true;
 }
 
 // Tamanho de tag ou frame: synchsafe na 2.4, inteiro comum na 2.3.
-bool sizeField(uint8_t version, const uint8_t* b, uint32_t& out) {
+bool sizeField(uint8_t version, const uint8_t* byte, uint32_t& out) {
     if (version == 4)
-        return synchsafe(b, out);
-    out = uint32_t(b[0]) << 24 | uint32_t(b[1]) << 16 | uint32_t(b[2]) << 8 | b[3];
+        return synchsafe(byte, out);
+    out = uint32_t(byte[0]) << 24 | uint32_t(byte[1]) << 16 | uint32_t(byte[2]) << 8 | byte[3];
     return true;
 }
 
-// Desfaz a unsynchronisation (FF 00 -> FF) no proprio buffer.
-size_t deUnsync(uint8_t* p, size_t n) {
+// Desfaz a unsynchronisation (FF 00 -> FF) no próprio buffer.
+size_t deUnsync(uint8_t* bytes, size_t count) {
     size_t w = 0;
-    for (size_t r = 0; r < n; ++r) {
-        p[w++] = p[r];
-        if (p[r] == 0xFF && r + 1 < n && p[r + 1] == 0)
+    for (size_t r = 0; r < count; ++r) {
+        bytes[w++] = bytes[r];
+        if (bytes[r] == 0xFF && r + 1 < count && bytes[r + 1] == 0)
             ++r;
     }
+
     return w;
 }
 
-// Dados do frame comecam depois dos bytes opcionais de agrupamento e tamanho; false se o frame vem
-// comprimido ou cifrado. flags e o segundo byte de flags do cabecalho do frame.
+// Dados do frame começam depois dos bytes opcionais de agrupamento e tamanho; false se o frame vem
+// comprimido ou cifrado. flags e o segundo byte de flags do cabeçalho do frame.
 bool dataStart(uint8_t version, uint8_t flags, uint8_t& skip, bool& unsync) {
     skip = 0;
     unsync = false;
     if (version == 4) {
-        if (flags & 0x0C)
+        if (flags & kV24FrameCompressedOrEncrypted)
+
             return false;
-        skip = ((flags & 0x40) ? 1 : 0) + ((flags & 0x01) ? 4 : 0);
-        unsync = flags & 0x02;
+        skip = ((flags & kV24FrameGrouping) ? 1 : 0) + ((flags & kV24FrameDataLength) ? kDataLengthBytes : 0);
+        unsync = flags & kV24FrameUnsync;
     } else {
-        if (flags & 0xC0)
+        if (flags & kV23FrameCompressedOrEncrypted)
             return false;
-        skip = (flags & 0x20) ? 1 : 0;
+
+        skip = (flags & kV23FrameGrouping) ? 1 : 0;
     }
+
     return true;
 }
 
-bool frameArtist(Mp3ReadAt readAt, void* ctx, uint32_t at, uint32_t size, uint8_t version, uint8_t flags, bool tagUnsync, char* out) {
+struct TagContext {
+    Mp3ReadAt readAt;
+    void* ctx;
+    uint8_t version;
+    uint8_t tagFlags;
+};
+
+struct FrameRef {
+    uint32_t at; // início dos dados
+    uint32_t size;
+    uint8_t flags;
+};
+
+inline bool frameArtist(const TagContext& tag, const FrameRef& frame, char* out) {
     uint8_t skip;
     bool unsync;
-    if (!dataStart(version, flags, skip, unsync) || size <= skip)
+    if (!dataStart(tag.version, frame.flags, skip, unsync) || frame.size <= skip)
         return false;
-    uint8_t raw[kRaw];
-    size_t n = readAt(ctx, at + skip, raw, size - skip < kRaw ? size - skip : kRaw);
-    if (unsync || tagUnsync)
-        n = deUnsync(raw, n);
+
+    uint8_t raw[kRawBytes];
+    size_t count = tag.readAt(tag.ctx, frame.at + skip, raw,
+        frame.size - skip < kRawBytes ? frame.size - skip : kRawBytes);
+    if (unsync || (tag.tagFlags & kTagFlagUnsync))
+        count = deUnsync(raw, count);
+
     Utf8Out text(out, kMaxArtistLen);
-    return decodeText(raw, n, text);
+    return decodeText(raw, count, text);
+}
+
+// Avança pos além do cabeçalho estendido; false se ele não cabe na tag.
+inline bool skipExtendedHeader(const TagContext& tag, uint32_t end, uint32_t& pos) {
+    uint8_t raw[kExtendedSizeBytes];
+    uint32_t size;
+    if (tag.readAt(tag.ctx, pos, raw, sizeof(raw)) != sizeof(raw) || !sizeField(tag.version, raw, size))
+        return false;
+
+    size = tag.version == 4 ? size : size + kExtendedSizeBytes; // na 2.4 o tamanho conta o próprio campo
+    if (size > end - pos)
+        return false;
+    pos += size;
+    return true;
 }
 
 bool v2Artist(Mp3ReadAt readAt, void* ctx, uint32_t fileSize, char* out) {
-    uint8_t h[10];
+    uint8_t head[kId3TagHeaderBytes];
     uint32_t tagSize;
-    if (readAt(ctx, 0, h, sizeof(h)) != sizeof(h) || memcmp(h, "ID3", 3) != 0 || (h[3] != 3 && h[3] != 4) || !synchsafe(h + 6, tagSize))
+    if (readAt(ctx, 0, head, sizeof(head)) != sizeof(head) ||
+        memcmp(head, "ID3", 3) != 0 || (head[3] != 3 && head[3] != 4) ||
+        !synchsafe(head + kTagSizeAt, tagSize))
         return false;
-    const uint8_t version = h[3];
-    const uint32_t end = tagSize + 10 < fileSize ? tagSize + 10 : fileSize;
-    uint32_t pos = 10;
-    if (h[5] & 0x40) { // cabecalho estendido: pula
-        uint8_t e[4];
+
+    const TagContext tag{readAt, ctx, head[3], head[5]};
+    const uint32_t end = tagSize + kId3TagHeaderBytes < fileSize ? tagSize + kId3TagHeaderBytes : fileSize;
+    uint32_t pos = kId3TagHeaderBytes;
+    if ((tag.tagFlags & kTagFlagExtended) && !skipExtendedHeader(tag, end, pos))
+        return false;
+
+    for (uint8_t i = 0; i < kMaxFrames && pos + kId3FrameHeaderBytes <= end; ++i) {
+        uint8_t raw[kId3FrameHeaderBytes];
         uint32_t size;
-        if (readAt(ctx, pos, e, sizeof(e)) != sizeof(e))
+        if (readAt(ctx, pos, raw, sizeof(raw)) != sizeof(raw) || raw[0] == 0) // 0 = padding
             return false;
-        if (!sizeField(version, e, size))
+
+        if (!sizeField(tag.version, raw + kFrameSizeAt, size))
             return false;
-        size = version == 4 ? size : size + 4; // na 2.4 o tamanho conta o proprio campo
+        pos += kId3FrameHeaderBytes;
         if (size > end - pos)
             return false;
+
+        if (memcmp(raw, "TPE1", 4) == 0)
+            return frameArtist(tag, FrameRef{pos, size, raw[9]}, out);
         pos += size;
     }
-    for (uint8_t i = 0; i < kMaxFrames && pos + 10 <= end; ++i) {
-        uint8_t f[10];
-        uint32_t size;
-        if (readAt(ctx, pos, f, sizeof(f)) != sizeof(f) || f[0] == 0) // 0 = padding
-            return false;
-        if (!sizeField(version, f + 4, size))
-            return false;
-        pos += 10;
-        if (size > end - pos)
-            return false;
-        if (memcmp(f, "TPE1", 4) == 0)
-            return frameArtist(readAt, ctx, pos, size, version, f[9], h[5] & 0x80, out);
-        pos += size;
-    }
+
     return false;
 }
 
 bool v1Artist(Mp3ReadAt readAt, void* ctx, uint32_t fileSize, char* out) {
-    uint8_t b[63]; // "TAG", titulo (30), artista (30)
-    if (fileSize < 128 || readAt(ctx, fileSize - 128, b, sizeof(b)) != sizeof(b) || memcmp(b, "TAG", 3) != 0)
+    uint8_t raw[kId3v1ReadBytes];
+    if (fileSize < kId3v1Bytes ||
+        readAt(ctx, fileSize - kId3v1Bytes, raw, sizeof(raw)) != sizeof(raw) || memcmp(raw, "TAG", 3) != 0)
         return false;
     Utf8Out text(out, kMaxArtistLen);
-    decodeLatin1(b + 33, 30, text);
+    decodeLatin1(raw + kId3v1ArtistAt, kId3v1ArtistBytes, text);
     return text.finish();
 }
 

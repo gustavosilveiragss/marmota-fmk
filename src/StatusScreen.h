@@ -4,8 +4,8 @@
 
 namespace mrm {
 
-// Uma barra de topo (glifo wifi opcional, titulo e bateria) sobre linhas centralizadas. O numero
-// de linhas visiveis segue a altura do painel, entao a mesma tela cabe em displays menores
+// Uma barra de topo (glifo wifi opcional, título e bateria) sobre linhas centralizadas. O número
+// de linhas visíveis segue a altura do painel, então a mesma tela cabe em displays menores
 // paginando as linhas ao longo de draws sucessivos.
 class StatusScreen {
 public:
@@ -21,7 +21,7 @@ public:
     explicit StatusScreen(Ssd1306Display& display)
         : display_(display) {}
 
-    // step avanca a animacao do wifi e a paginacao de linhas em paineis pequenos.
+    // step avança a animação do wifi e a paginação de linhas em painéis pequenos.
     void draw(const Config& config, uint8_t step = 0);
 
 private:

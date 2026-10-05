@@ -3,18 +3,26 @@
 #include <Arduino.h>
 #include <FS.h>
 #include <WebServer.h>
+#include <WiFi.h>
 #include <DNSServer.h>
 #include <functional>
 
 namespace mrm {
 
+// Socket do cliente em atendimento. WebServer::client() devolve cópia, então setTimeout/stop por ela não
+// chegam ao socket; o membro protegido _currentClient e alcançado sem alterar a lib.
+WiFiClient& currentClient(WebServer& server);
+
+// Espera por dados do corpo: o Stream recebe ms, e passar segundos dava 5 ms e abortava na primeira pausa.
+void setRecvTimeout(WebServer& server, uint32_t seconds);
+
 class WifiPortal {
 public:
     struct Config {
         const char* ssid = "marmota";
-        const char* destPath = "/upload.bin"; // onde um upload valido e guardado, nullptr desliga /upload
+        const char* destPath = "/upload.bin"; // onde um upload válido e guardado, nullptr desliga /upload
         const char* page = nullptr;           // HTML servido em GET /
-        const uint8_t* pageGz = nullptr;      // pagina gzip em PROGMEM, tem prioridade sobre page
+        const uint8_t* pageGz = nullptr;      // página gzip em PROGMEM, tem prioridade sobre page
         size_t pageGzLen = 0;
         uint8_t channel = 1;
         uint8_t maxClients = 4;

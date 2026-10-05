@@ -6,7 +6,7 @@ namespace mrm {
 namespace game {
 namespace twobtn {
 
-// Snake do Nokia: A vira a cobra para a esquerda dela, B para a direita. Paredes dao a volta.
+// Snake do Nokia: A vira a cobra para a esquerda dela, B para a direita. Paredes dão a volta.
 class Snake : public Game {
 public:
     const GameText& text() const override;
@@ -43,7 +43,7 @@ private:
     uint16_t eaten_ = 0;
     uint8_t grow_ = 0;
     uint8_t dir_ = 0; // 0 direita, 1 baixo, 2 esquerda, 3 cima
-    int8_t turn_ = 0; // -1 esquerda, +1 direita, pedido pendente para o proximo passo
+    int8_t turn_ = 0; // -1 esquerda, +1 direita, pedido pendente para o próximo passo
     uint8_t sinceStep_ = 0;
     bool over_ = false;
     uint32_t rng_ = 1;

@@ -5,8 +5,8 @@
 
 namespace mrm {
 
-// SSD1306Wire com texto sem alocar: o drawString da lib so aceita String e faz copias no heap a
-// cada chamada, o que fragmenta a memoria num redesenho de 20 quadros por segundo.
+// SSD1306Wire com texto sem alocar: o drawString da lib só aceita String e faz cópias no heap a
+// cada chamada, o que fragmenta a memória num redesenho de 20 quadros por segundo.
 class Panel : public SSD1306Wire {
 public:
     using SSD1306Wire::SSD1306Wire;
@@ -25,7 +25,7 @@ public:
         uint8_t sda = 5;
         uint8_t scl = 6;
         bool flip = true;
-        uint8_t contrast = 0; // 0 mantem o padrao da lib, mais baixo economiza bateria direto
+        uint8_t contrast = 0; // 0 mantém o padrão da lib, mais baixo economiza bateria direto
     };
 
     Ssd1306Display();
@@ -34,7 +34,7 @@ public:
     void begin();
     void reinit();
 
-    // off() mantem o buffer e o controlador vivos (~5uA), entao on() traz o mesmo frame de volta.
+    // off() mantém o buffer e o controlador vivos (~5uA), então on() traz o mesmo frame de volta.
     void on();
     void off();
     void setContrast(uint8_t contrast);

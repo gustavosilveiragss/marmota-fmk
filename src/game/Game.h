@@ -1,8 +1,8 @@
 #pragma once
 
-// Os jogos moram no fmk porque varios projetos vao usa-los: o motor (Game, GameHost, GameStore,
-// GameView) e as telas de tutorial, contagem, pausa e fim sao genericos. Cada esquema de entrada
-// tem a sua subpasta de jogos (twobtn para 2 botoes) e o projeto escolhe qual incluir.
+// Os jogos moram no fmk porque vários projetos vão usa-los: o motor (Game, GameHost, GameStore,
+// GameView) e as telas de tutorial, contagem, pausa e fim são genéricos. Cada esquema de entrada
+// tem a sua subpasta de jogos (twobtn para 2 botões) e o projeto escolhe qual incluir.
 
 #include "../Locale.h"
 #include "../Ssd1306Display.h"
@@ -10,7 +10,7 @@
 namespace mrm {
 namespace game {
 
-// Entrada de um passo de simulacao: o que as duas teclas estao fazendo agora.
+// Entrada de um passo de simulação: o que as duas teclas estão fazendo agora.
 struct GameInput {
     bool a;      // A segurado
     bool b;      // B segurado
@@ -24,7 +24,7 @@ struct GameText {
     Text goal;
     Text keyA;
     Text keyB;
-    Text rules[3]; // pagina 2 do tutorial: as regras em 3 linhas
+    Text rules[3]; // página 2 do tutorial: as regras em 3 linhas
 };
 
 enum class GamePhase : uint8_t { Tutorial,
@@ -44,8 +44,8 @@ inline uint32_t nextRandom(uint32_t& state) { // xorshift32: sem estado global n
     return state;
 }
 
-// Um jogo e so simulacao e desenho: nao conhece menu, tutorial nem pausa (isso e do GameHost).
-// A simulacao anda em passos fixos de kTickMs, independente da taxa de quadros.
+// Um jogo é só simulação e desenho: não conhece menu, tutorial nem pausa (isso é do GameHost).
+// A simulação anda em passos fixos de kTickMs, independente da taxa de quadros.
 class Game {
 public:
     static constexpr uint32_t kTickMs = 33;
@@ -65,7 +65,7 @@ protected:
     ~Game() = default;
 };
 
-// Faixa de pontos no topo de um jogo: vidas a esquerda (bolinhas) e pontuacao a direita.
+// Faixa de pontos no topo de um jogo: vidas a esquerda (bolinhas) e pontuação a direita.
 void hud(Panel& o, uint16_t score, uint8_t lives);
 
 } // namespace game

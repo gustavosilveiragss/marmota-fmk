@@ -55,18 +55,21 @@ void lightSleep(uint32_t maxMs, int wakePin, bool activeLow) {
     if (maxMs > 0)
         esp_sleep_enable_timer_wakeup(uint64_t(maxMs) * kUsPerMs);
     else
-        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER); // so pino: dorme ate apertar
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER); // só pino: dorme até apertar
+
     if (wakePin >= 0) {
-        // Acorda na proxima borda do pino: arma o nivel que ele NAO tem agora, entao tanto o
-        // aperto quanto a soltura tiram a CPU do sono, sem borda cega. Armar o nivel oposto ao
-        // atual tambem evita reacordar em loop com o botao segurado.
+        // Acorda na próxima borda do pino: arma o nível que ele NÃO tem agora, então tanto o
+        // aperto quanto a soltura tiram a CPU do sono, sem borda cega. Armar o nível oposto ao
+        // atual também evita reacordar em loop com o botão segurado.
         const gpio_num_t pin = gpio_num_t(wakePin);
         const gpio_int_type_t edge = gpio_get_level(pin) ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL;
+
         gpio_wakeup_enable(pin, edge);
         esp_sleep_enable_gpio_wakeup();
     } else {
         esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
     }
+
     esp_light_sleep_start();
 }
 

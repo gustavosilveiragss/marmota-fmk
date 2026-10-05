@@ -4,9 +4,9 @@ namespace mrm {
 
 namespace {
 
-// Tensao de repouso (OCV) de LiPo LiCoO2 a 25C. Curvas de datasheet sao levantadas a 0.2C e
+// Tensão de repouso (OCV) de LiPo LiCoO2 a 25C. Curvas de datasheet são levantadas a 0.2C e
 // ficam ~80mV abaixo da OCV. Usa-las num aparelho que puxa 0.005-0.02C superestima a carga em
-// 15-25pp no meio da descarga. O 0% fica em 3.30V: abaixo disso o LDO da placa nao segura o
+// 15-25pp no meio da descarga. O 0% fica em 3.30V: abaixo disso o LDO da placa não segura o
 // 3V3 e sobra ~1% de carga real.
 constexpr Battery::Point kCurve[] = {
     {4.20f, 100}, {4.15f, 95}, {4.11f, 90}, {4.08f, 85}, {4.02f, 80}, {3.98f, 75}, {3.95f, 70},
@@ -25,6 +25,7 @@ void Battery::begin() {
     analogReadResolution(kAdcBits);
     pinMode(config_.adcPin, INPUT);
     analogSetPinAttenuation(config_.adcPin, ADC_11db); // no fica em ~2.1V cheio, ~2.5V no usb
+
     voltage_ = readVoltage();
     anchor_ = voltage_;
     usb_ = voltage_ > config_.usbThresholdV;
@@ -43,9 +44,10 @@ bool Battery::update() {
     voltage_ = primed_ ? voltage_ + alpha * (fresh - voltage_) : fresh;
     usb_ = voltage_ > config_.usbThresholdV;
 
-    // A porcentagem so mexe quando a tensao sai da banda morta em volta da ancora, pros dois lados.
-    // Ruido menor que a histerese nao balanca o badge entre pontos da curva, e uma queda de ruido
-    // nao afunda a ancora, senao a porcentagem viraria o minimo corrente e nunca voltava a subir.
+    // A porcentagem só mexe quando a tensão sai da banda morta em volta da âncora, pros dois lados.
+    // Ruído menor que a histerese não balança o badge entre pontos da curva, e uma queda de ruído
+    // não afunda a âncora, senão a porcentagem viraria o mínimo corrente e nunca voltava a subir.
+
     const uint8_t reading = percentFromVoltage(voltage_);
     const bool moved = voltage_ > anchor_ + config_.riseHysteresisV ||
                        voltage_ < anchor_ - config_.riseHysteresisV;
@@ -53,16 +55,18 @@ bool Battery::update() {
         percent_ = reading;
         anchor_ = voltage_;
     }
+
     primed_ = true;
     return true;
 }
 
-// Media aparada da metade do meio: rajadas de TX e a alta impedancia do divisor viram picos de um
-// lado so, que a media simples engole e a mediana responde com a quantizacao de uma amostra.
+// Media aparada da metade do meio: rajadas de TX e a alta impedância do divisor viram picos de um
+// lado só, que a média simples engole e a mediana responde com a quantização de uma amostra.
 uint16_t Battery::readNodeMillivolts() const {
     const uint8_t n = constrain(config_.samples, kMinSamples, kMaxSamples);
     uint16_t s[kMaxSamples];
-    analogReadMilliVolts(config_.adcPin); // descarta a conversao de assentamento
+    analogReadMilliVolts(config_.adcPin); // descarta a conversão de assentamento
+
     for (uint8_t i = 0; i < n; ++i)
         s[i] = uint16_t(analogReadMilliVolts(config_.adcPin));
 
@@ -86,6 +90,7 @@ float Battery::calibrateTo(float cellVolts) {
     const float raw = (float(readNodeMillivolts()) / kMvPerV) * config_.divider;
     if (raw > 0.1f)
         config_.calibration = cellVolts / raw;
+
     voltage_ = cellVolts;
     anchor_ = cellVolts;
     percent_ = percentFromVoltage(cellVolts);
@@ -104,8 +109,10 @@ uint8_t Battery::percentFromVoltage(float v) const {
     const size_t len = config_.curve ? config_.curveLen : kCurveLen;
     if (len == 0 || v >= curve[0].volts)
         return 100;
+
     if (v <= curve[len - 1].volts)
         return 0;
+
     for (size_t i = 1; i < len; ++i) {
         if (v >= curve[i].volts) {
             const Point& hi = curve[i - 1];
@@ -114,6 +121,7 @@ uint8_t Battery::percentFromVoltage(float v) const {
             return uint8_t(lroundf(lo.percent + frac * (hi.percent - lo.percent)));
         }
     }
+
     return 0;
 }
 

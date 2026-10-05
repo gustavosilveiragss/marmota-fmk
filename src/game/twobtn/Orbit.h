@@ -6,7 +6,7 @@ namespace mrm {
 namespace game {
 namespace twobtn {
 
-// Orbita: um ponto gira em volta do centro, A para um lado e B para o outro; passe pela brecha dos aneis.
+// Órbita: um ponto gira em volta do centro, A para um lado e B para o outro. Passe pela brecha dos anéis.
 class Orbit : public Game {
 public:
     const GameText& text() const override;

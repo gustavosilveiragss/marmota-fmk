@@ -21,14 +21,17 @@ inline size_t jsonEscapeChar(unsigned char c, char* out) {
         out[0] = '\\';
         out[1] = static_cast<char>(c);
         return 2;
+
     case '\n':
         out[0] = '\\';
         out[1] = 'n';
         return 2;
+
     case '\r':
         out[0] = '\\';
         out[1] = 'r';
         return 2;
+
     case '\t':
         out[0] = '\\';
         out[1] = 't';
@@ -36,10 +39,12 @@ inline size_t jsonEscapeChar(unsigned char c, char* out) {
     default:
         break;
     }
+
     if (c >= 0x20) {
         out[0] = static_cast<char>(c);
         return 1;
     }
+
     static const char hex[] = "0123456789ABCDEF";
     out[0] = '\\';
     out[1] = 'u';
@@ -50,8 +55,8 @@ inline size_t jsonEscapeChar(unsigned char c, char* out) {
     return 6;
 }
 
-// Escapa `in` ate acabar ou faltar espaco para o proximo caractere. `in` avanca ate onde foi
-// consumido (== '\0' quando terminou). Nao grava terminador; devolve bytes escritos em out.
+// Escapa `in` até acabar ou faltar espaço para o próximo caractere. `in` avança até onde foi
+// consumido (== '\0' quando terminou). Não grava terminador; devolve bytes escritos em out.
 inline size_t jsonEscapeSome(const char*& in, char* out, size_t cap) {
     size_t n = 0;
     while (*in) {
@@ -59,25 +64,17 @@ inline size_t jsonEscapeSome(const char*& in, char* out, size_t cap) {
         const size_t len = jsonEscapeChar(static_cast<unsigned char>(*in), tmp);
         if (n + len > cap)
             break;
+
         for (size_t i = 0; i < len; ++i)
             out[n++] = tmp[i];
         ++in;
     }
-    return n;
-}
 
-// Versao completa: escapa `in` inteira para out (cap inclui o '\0'), truncando em fronteira de
-// caractere se nao couber. Devolve o comprimento escrito, sem o terminador.
-inline size_t jsonEscape(const char* in, char* out, size_t cap) {
-    if (cap == 0)
-        return 0;
-    const size_t n = jsonEscapeSome(in, out, cap - 1);
-    out[n] = '\0';
     return n;
 }
 
 #ifdef MRM_HAS_WEBSERVER
-// Escreve JSON em chunks de ate 256 B. O chamador faz setContentLength(CONTENT_LENGTH_UNKNOWN)
+// Escreve JSON em chunks de até 256 B. O chamador faz setContentLength(CONTENT_LENGTH_UNKNOWN)
 // e send() antes; end() fecha o chunked.
 class JsonOut {
 public:
@@ -87,9 +84,11 @@ public:
         while (*s) {
             const size_t room = sizeof(buf_) - len_;
             const size_t take = strnlen(s, room);
+
             memcpy(buf_ + len_, s, take);
             len_ += take;
             s += take;
+
             if (len_ == sizeof(buf_))
                 flush();
         }
@@ -103,7 +102,15 @@ public:
             if (*s)
                 flush();
         }
+
         put('"');
+    }
+
+    // Escreve "name": (nome sem escape); virgulas ficam com o chamador.
+    void key(const char* name) {
+        put('"');
+        raw(name);
+        raw("\":");
     }
 
     void num(uint64_t v) {
